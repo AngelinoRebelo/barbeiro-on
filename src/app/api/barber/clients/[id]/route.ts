@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { apiUser, jsonError } from "@/lib/auth";
 import { clientSchema } from "@/lib/validators";
 import { parseFeatures } from "@/lib/features";
+import { removeShopClientAccount } from "@/lib/clients";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -34,6 +35,12 @@ export async function DELETE(_: Request, ctx: Ctx) {
   const { id } = await ctx.params;
   const boxed = await scoped(id);
   if (!boxed?.client) return jsonError("Cliente não encontrado.", 404);
+  const { client, profile } = boxed;
   await prisma.barberClient.delete({ where: { id } });
+  await removeShopClientAccount({
+    barberId: profile.id,
+    userId: client.userId,
+    email: client.email,
+  });
   return NextResponse.json({ ok: true });
 }

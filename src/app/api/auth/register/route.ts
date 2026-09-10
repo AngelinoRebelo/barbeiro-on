@@ -21,9 +21,6 @@ export async function POST(req: Request) {
   const rule = passwordRules(password);
   if (rule) return NextResponse.json({ error: rule }, { status: 400 });
 
-  const exists = await prisma.user.findUnique({ where: { email } });
-  if (exists) return NextResponse.json({ error: "Este e-mail já está cadastrado." }, { status: 409 });
-
   const passwordHash = await hashPassword(password);
   const token = randomToken();
 
@@ -32,6 +29,63 @@ export async function POST(req: Request) {
     if (!shopSlug) return NextResponse.json({ error: "Cadastre-se pelo link da barbearia." }, { status: 400 });
     const shop = await prisma.barberProfile.findUnique({ where: { slug: shopSlug } });
     if (!shop) return NextResponse.json({ error: "Barbearia não encontrada." }, { status: 404 });
+
+    const exists = await prisma.user.findUnique({ where: { email } });
+    if (exists) {
+      const stillInShop = await prisma.barberClient.findFirst({
+        where: {
+          barberId: shop.id,
+          OR: [{ userId: exists.id }, { email }],
+        },
+      });
+      if (exists.role !== "CLIENT") {
+        return NextResponse.json({ error: "Este e-mail já está cadastrado." }, { status: 409 });
+      }
+      if (exists.shopId && exists.shopId !== shop.id) {
+        return NextResponse.json({ error: "Este e-mail já está cadastrado em outra barbearia." }, { status: 409 });
+      }
+      if (stillInShop) {
+        return NextResponse.json({ error: "Este e-mail já está cadastrado nesta barbearia." }, { status: 409 });
+      }
+      await prisma.authToken.deleteMany({ where: { userId: exists.id } });
+      await prisma.user.update({
+        where: { id: exists.id },
+        data: {
+          name: name.trim(),
+          phone: phone || null,
+          passwordHash,
+          status: "PENDING_EMAIL",
+          emailVerified: null,
+          shopId: shop.id,
+          tokens: {
+            create: { type: "EMAIL_VERIFY", token, expiresAt: new Date(Date.now() + 86400000) },
+          },
+        },
+      });
+      await prisma.barberClient.create({
+        data: {
+          barberId: shop.id,
+          userId: exists.id,
+          name: name.trim(),
+          email,
+          phone: phone || "",
+        },
+      });
+      try {
+        await sendVerifyEmail(email, name.trim(), token);
+      } catch {
+        return NextResponse.json(
+          { ok: true, slug: shop.slug, message: "Conta reativada nesta barbearia. O e-mail falhou; peça reenvio." },
+          { status: 201 },
+        );
+      }
+      return NextResponse.json({
+        ok: true,
+        slug: shop.slug,
+        path: shopPath(shop.slug),
+        message: "Enviamos a confirmação. Depois você entra nesta barbearia.",
+      });
+    }
 
     const user = await prisma.user.create({
       data: {
@@ -71,6 +125,9 @@ export async function POST(req: Request) {
       message: "Enviamos a confirmação. Depois você entra nesta barbearia.",
     });
   }
+
+  const exists = await prisma.user.findUnique({ where: { email } });
+  if (exists) return NextResponse.json({ error: "Este e-mail já está cadastrado." }, { status: 409 });
 
   const shopName = parsed.data.shopName?.trim();
   if (!shopName) return NextResponse.json({ error: "Informe o nome da barbearia." }, { status: 400 });
