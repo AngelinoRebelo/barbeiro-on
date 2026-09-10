@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #07080c;
+  --bg-2: #0b0d14;
+  --card: rgba(14, 17, 26, 0.78);
+  --line: rgba(212, 175, 55, 0.2);
+  --gold: #d4af37;
+  --gold-2: #f3d98a;
+  --cyan: #3ee8c8;
+  --text: #e9edf5;
+  --muted: #8b93a7;
+  --danger: #ff5d73;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-gold: var(--gold);
+  --color-cyan: var(--cyan);
+  --font-sans: var(--font-outfit);
+  --font-mono: var(--font-jb);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font-outfit), system-ui, sans-serif;
+  background:
+    radial-gradient(1200px 500px at 10% -10%, rgba(212, 175, 55, 0.12), transparent 55%),
+    radial-gradient(900px 420px at 110% 0%, rgba(62, 232, 200, 0.08), transparent 50%),
+    linear-gradient(180deg, #07080c 0%, #090b11 100%);
+}
+
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(212,175,55,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(212,175,55,0.05) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.glass {
+  background: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  backdrop-filter: blur(16px);
+}
+
+.gold-line {
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  height: 1px;
+}
+
+input, select, textarea {
+  color: var(--text);
+}

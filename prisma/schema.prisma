@@ -1,0 +1,208 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  BARBER
+  CLIENT
+}
+
+enum UserStatus {
+  PENDING_EMAIL
+  ACTIVE
+  SUSPENDED
+}
+
+enum PixKeyType {
+  CPF
+  CNPJ
+  EMAIL
+  PHONE
+  RANDOM
+}
+
+enum ServiceCategory {
+  HAIR
+  BEARD
+  COMBO
+  OTHER
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  DONE
+  CANCELLED
+  NO_SHOW
+}
+
+enum PaymentMethod {
+  PIX
+  MERCADOPAGO
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  passwordHash  String
+  name          String
+  phone         String?
+  role          Role
+  status        UserStatus @default(PENDING_EMAIL)
+  emailVerified DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  barberProfile BarberProfile?
+  tokens        AuthToken[]
+  clientsOwned  BarberClient[] @relation("BarberClients")
+  clientLinks   BarberClient[] @relation("ClientUser")
+  appointments  Appointment[]  @relation("ClientAppointments")
+  payments      Payment[]      @relation("ClientPayments")
+  auditLogs     AuditLog[]
+}
+
+model AuthToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId, type])
+}
+
+model BarberProfile {
+  id          String     @id @default(cuid())
+  userId      String     @unique
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shopName    String
+  slug        String     @unique
+  bio         String     @default("")
+  address     String     @default("")
+  city        String     @default("São Paulo")
+  approved    Boolean    @default(false)
+  openTime    String     @default("09:00")
+  closeTime   String     @default("20:00")
+  workDays    Int[]      @default([1, 2, 3, 4, 5, 6])
+  pixKey      String     @default("")
+  pixKeyType  PixKeyType @default(RANDOM)
+  mpPublicKey String     @default("")
+  mpAccessEnc String     @default("")
+  features    Json       @default("{\"agenda\":true,\"clients\":true,\"services\":true,\"pix\":true,\"mercadopago\":true,\"publicShop\":true}")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  services     Service[]
+  clients      BarberClient[]
+  appointments Appointment[]
+  payments     Payment[]
+}
+
+model Service {
+  id           String          @id @default(cuid())
+  barberId     String
+  barber       BarberProfile   @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  name         String
+  description  String          @default("")
+  category     ServiceCategory @default(HAIR)
+  durationMin  Int             @default(30)
+  priceCents   Int
+  active       Boolean         @default(true)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  appointments Appointment[]
+}
+
+model BarberClient {
+  id          String        @id @default(cuid())
+  barberId    String
+  barber      BarberProfile @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?         @relation("ClientUser", fields: [userId], references: [id], onDelete: SetNull)
+  createdById String?
+  createdBy   User?         @relation("BarberClients", fields: [createdById], references: [id], onDelete: SetNull)
+  name        String
+  phone       String        @default("")
+  email       String        @default("")
+  notes       String        @default("")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  appointments Appointment[]
+  payments     Payment[]
+
+  @@index([barberId, email])
+  @@index([barberId, phone])
+}
+
+model Appointment {
+  id        String            @id @default(cuid())
+  barberId  String
+  barber    BarberProfile     @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  clientId  String
+  client    BarberClient      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?             @relation("ClientAppointments", fields: [userId], references: [id], onDelete: SetNull)
+  serviceId String
+  service   Service           @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  startsAt  DateTime
+  endsAt    DateTime
+  status    AppointmentStatus @default(SCHEDULED)
+  notes     String            @default("")
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  payments  Payment[]
+
+  @@index([barberId, startsAt])
+}
+
+model Payment {
+  id             String         @id @default(cuid())
+  barberId       String
+  barber         BarberProfile  @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  appointmentId  String?
+  appointment    Appointment?   @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  clientId       String?
+  client         BarberClient?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  userId         String?
+  user           User?          @relation("ClientPayments", fields: [userId], references: [id], onDelete: SetNull)
+  amountCents    Int
+  method         PaymentMethod
+  status         PaymentStatus  @default(PENDING)
+  pixPayload     String?
+  pixTxid        String?
+  mpPreferenceId String?
+  mpInitPoint    String?
+  mpPaymentId    String?
+  paidAt         DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([barberId, status])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action    String
+  target    String   @default("")
+  meta      Json?
+  createdAt DateTime @default(now())
+}

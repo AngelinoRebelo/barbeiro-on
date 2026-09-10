@@ -1,0 +1,74 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Button, Card, Field, inputClass } from "@/components/ui";
+
+type Client = { id: string; name: string; phone: string; email: string; notes: string };
+
+export default function ClientesPage() {
+  const [clients, setClients] = useState<Client[]>([]);
+  const [form, setForm] = useState({ name: "", phone: "", email: "", notes: "" });
+  const [msg, setMsg] = useState("");
+
+  async function load() {
+    const res = await fetch("/api/barber/clients");
+    const data = await res.json();
+    setClients(data.clients || []);
+  }
+  useEffect(() => {
+    load();
+  }, []);
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+      <Card>
+        <h2 className="mb-4">Base de clientes</h2>
+        <div className="grid gap-2">
+          {clients.map((c) => (
+            <div key={c.id} className="flex items-center justify-between rounded-2xl border border-white/5 px-4 py-3">
+              <div>
+                <p>{c.name}</p>
+                <p className="text-sm text-[#8b93a7]">{c.phone} {c.email}</p>
+              </div>
+              <Button
+                variant="ghost"
+                onClick={async () => {
+                  await fetch(`/api/barber/clients/${c.id}`, { method: "DELETE" });
+                  load();
+                }}
+              >
+                Remover
+              </Button>
+            </div>
+          ))}
+        </div>
+      </Card>
+      <Card>
+        <h2 className="mb-4">Novo cliente</h2>
+        <form
+          className="space-y-3"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const res = await fetch("/api/barber/clients", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify(form),
+            });
+            const data = await res.json();
+            if (!res.ok) setMsg(data.error);
+            else {
+              setForm({ name: "", phone: "", email: "", notes: "" });
+              load();
+            }
+          }}
+        >
+          <Field label="Nome"><input className={inputClass()} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></Field>
+          <Field label="Telefone"><input className={inputClass()} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></Field>
+          <Field label="E-mail"><input className={inputClass()} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
+          {msg && <p className="text-sm text-[#ff5d73]">{msg}</p>}
+          <Button className="w-full">Salvar</Button>
+        </form>
+      </Card>
+    </div>
+  );
+}
