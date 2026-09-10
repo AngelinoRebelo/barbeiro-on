@@ -12,6 +12,32 @@ export const registerSchema = z.object({
   phone: z.string().max(20).optional().default(""),
   role: z.enum(["BARBER", "CLIENT"]),
   shopName: z.string().max(80).optional().default(""),
+  shopSlug: z.string().max(60).optional().default(""),
+  planId: z.string().max(40).optional().default(""),
+  pixKey: z.string().max(80).optional().default(""),
+  pixKeyType: z.enum(["CPF", "CNPJ", "EMAIL", "PHONE", "RANDOM"]).optional().default("RANDOM"),
+  mpPublicKey: z.string().max(200).optional().default(""),
+  mpAccessToken: z.string().max(300).optional().default(""),
+});
+
+export const planSchema = z.object({
+  name: z.string().min(2).max(60),
+  slug: z.string().min(2).max(40).optional(),
+  description: z.string().max(240).optional().default(""),
+  priceCents: z.coerce.number().int().min(0),
+  interval: z.enum(["MONTHLY", "YEARLY"]).optional().default("MONTHLY"),
+  active: z.boolean().optional().default(true),
+  sortOrder: z.coerce.number().int().optional().default(0),
+  features: z
+    .object({
+      agenda: z.boolean().optional(),
+      clients: z.boolean().optional(),
+      services: z.boolean().optional(),
+      pix: z.boolean().optional(),
+      mercadopago: z.boolean().optional(),
+      publicShop: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 export const serviceSchema = z.object({

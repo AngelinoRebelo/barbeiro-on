@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-export function Logo({ compact = false }: { compact?: boolean }) {
+export function Logo({ compact = false, href = "/" }: { compact?: boolean; href?: string }) {
   return (
-    <Link href="/" className="flex items-center gap-3">
+    <Link href={href} className="flex items-center gap-3">
       <span className="relative grid h-10 w-10 place-items-center rounded-xl border border-[rgba(212,175,55,0.35)] bg-[#10131c]">
         <span className="absolute inset-1 rounded-lg border border-cyan/20" />
         <span className="font-mono text-[11px] tracking-[0.2em] text-gold">ON</span>

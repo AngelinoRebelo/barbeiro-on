@@ -2,8 +2,53 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getMpPayment } from "@/lib/mercadopago";
 import { decryptSecret } from "@/lib/crypto";
+import { getPlatformSettings } from "@/lib/platform";
+
+async function trySettle(access: string, mpId: string, rowId?: string) {
+  const remote = await getMpPayment(access, mpId);
+  const ext = String(remote.external_reference || "");
+  if (rowId && ext && ext !== rowId) return false;
+  const payment = ext
+    ? await prisma.payment.findUnique({ where: { id: ext } })
+    : rowId
+      ? await prisma.payment.findUnique({ where: { id: rowId } })
+      : null;
+  if (!payment) return false;
+  const status = remote.status;
+  const mapped =
+    status === "approved" ? "PAID" : status === "rejected" ? "FAILED" : status === "cancelled" ? "CANCELLED" : "PENDING";
+  await prisma.payment.update({
+    where: { id: payment.id },
+    data: {
+      mpPaymentId: String(remote.id || mpId),
+      status: mapped,
+      paidAt: mapped === "PAID" ? new Date() : payment.paidAt,
+    },
+  });
+  if (mapped === "PAID" && payment.appointmentId) {
+    await prisma.appointment.update({
+      where: { id: payment.appointmentId },
+      data: { status: "CONFIRMED" },
+    });
+  }
+  if (mapped === "PAID" && payment.kind === "SUBSCRIPTION") {
+    await prisma.barberProfile.update({
+      where: { id: payment.barberId },
+      data: { subscriptionStatus: "ACTIVE" },
+    });
+  }
+  return true;
+}
 
 async function settleById(mpId: string) {
+  const platform = await getPlatformSettings();
+  try {
+    const access = decryptSecret(platform.mpAccessEnc);
+    if (access && (await trySettle(access, mpId))) return;
+  } catch {
+    /* platform token ausente */
+  }
+
   const rows = await prisma.payment.findMany({
     where: { method: "MERCADOPAGO", status: "PENDING" },
     include: { barber: true },
@@ -20,27 +65,7 @@ async function settleById(mpId: string) {
     }
     if (!access) continue;
     try {
-      const remote = await getMpPayment(access, mpId);
-      const ext = String(remote.external_reference || "");
-      if (ext && ext !== row.id) continue;
-      const status = remote.status;
-      const mapped =
-        status === "approved" ? "PAID" : status === "rejected" ? "FAILED" : status === "cancelled" ? "CANCELLED" : "PENDING";
-      await prisma.payment.update({
-        where: { id: row.id },
-        data: {
-          mpPaymentId: String(remote.id || mpId),
-          status: mapped,
-          paidAt: mapped === "PAID" ? new Date() : row.paidAt,
-        },
-      });
-      if (mapped === "PAID" && row.appointmentId) {
-        await prisma.appointment.update({
-          where: { id: row.appointmentId },
-          data: { status: "CONFIRMED" },
-        });
-      }
-      return;
+      if (await trySettle(access, mpId, row.id)) return;
     } catch {
       continue;
     }

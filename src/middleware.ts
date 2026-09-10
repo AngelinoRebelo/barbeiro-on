@@ -1,63 +1,55 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { SESSION_COOKIE, readSessionToken } from "@/lib/session";
-
-const PUBLIC = [
-  "/",
-  "/login",
-  "/cadastro",
-  "/verificar",
-  "/recuperar",
-  "/redefinir",
-  "/s",
-  "/pagar",
-];
-
-function isPublic(pathname: string) {
-  if (PUBLIC.some((p) => pathname === p || (p !== "/" && pathname.startsWith(`${p}/`)))) return true;
-  if (pathname.startsWith("/api/auth")) return true;
-  if (pathname.startsWith("/api/payments/webhook")) return true;
-  if (pathname.startsWith("/api/health")) return true;
-  return false;
-}
+import { homePath, isReservedSlug } from "@/lib/paths";
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  if (
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/favicon") ||
-    pathname.includes(".")
-  ) {
+  if (pathname.startsWith("/_next") || pathname.startsWith("/favicon") || pathname.includes(".")) {
     return NextResponse.next();
   }
 
   const token = req.cookies.get(SESSION_COOKIE)?.value;
   const session = token ? await readSessionToken(token) : null;
+  const slug = session?.slug;
 
   if (pathname.startsWith("/admin")) {
     if (!session) return NextResponse.redirect(new URL("/login", req.url));
-    if (session.role !== "ADMIN") return NextResponse.redirect(new URL("/painel", req.url));
+    if (session.role !== "ADMIN") return NextResponse.redirect(new URL(homePath(session.role, slug), req.url));
   }
 
-  if (pathname.startsWith("/painel")) {
+  if (pathname === "/painel" || pathname.startsWith("/painel/")) {
     if (!session) return NextResponse.redirect(new URL("/login", req.url));
-    if (session.role === "ADMIN") return NextResponse.redirect(new URL("/admin", req.url));
-    if (session.role !== "BARBER") return NextResponse.redirect(new URL("/portal", req.url));
+    return NextResponse.redirect(new URL(homePath(session.role, slug), req.url));
   }
 
-  if (pathname.startsWith("/portal")) {
+  if (pathname === "/portal" || pathname.startsWith("/portal/")) {
     if (!session) return NextResponse.redirect(new URL("/login", req.url));
+    return NextResponse.redirect(new URL(homePath(session.role, slug), req.url));
+  }
+
+  const parts = pathname.split("/").filter(Boolean);
+  const maybeSlug = parts[0] || "";
+  const nested = parts[1];
+
+  if (maybeSlug && !isReservedSlug(maybeSlug) && nested === "painel") {
+    if (!session) return NextResponse.redirect(new URL(`/${maybeSlug}/login`, req.url));
     if (session.role === "ADMIN") return NextResponse.redirect(new URL("/admin", req.url));
-    if (session.role === "BARBER") return NextResponse.redirect(new URL("/painel", req.url));
+    if (session.role !== "BARBER" || session.slug !== maybeSlug) {
+      return NextResponse.redirect(new URL(homePath(session.role, slug), req.url));
+    }
+  }
+
+  if (maybeSlug && !isReservedSlug(maybeSlug) && nested === "portal") {
+    if (!session) return NextResponse.redirect(new URL(`/${maybeSlug}/login`, req.url));
+    if (session.role === "ADMIN") return NextResponse.redirect(new URL("/admin", req.url));
+    if (session.role !== "CLIENT" || session.slug !== maybeSlug) {
+      return NextResponse.redirect(new URL(homePath(session.role, slug), req.url));
+    }
   }
 
   if ((pathname === "/login" || pathname === "/cadastro") && session) {
-    const dest = session.role === "ADMIN" ? "/admin" : session.role === "BARBER" ? "/painel" : "/portal";
-    return NextResponse.redirect(new URL(dest, req.url));
-  }
-
-  if (!isPublic(pathname) && !session && pathname.startsWith("/api/")) {
-    return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+    return NextResponse.redirect(new URL(homePath(session.role, slug), req.url));
   }
 
   return NextResponse.next();

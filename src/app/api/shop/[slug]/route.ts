@@ -15,9 +15,9 @@ export async function GET(req: Request, ctx: Ctx) {
       services: { where: { active: true }, orderBy: { priceCents: "asc" } },
     },
   });
-  if (!shop || !shop.approved || shop.user.status !== "ACTIVE") return jsonError("Barbearia não encontrada.", 404);
+  if (!shop) return jsonError("Barbearia não encontrada.", 404);
   const features = parseFeatures(shop.features);
-  if (!features.publicShop) return jsonError("Página pública desativada.", 404);
+  const live = shop.approved && shop.user.status === "ACTIVE" && features.publicShop;
 
   const date = new URL(req.url).searchParams.get("date");
   const serviceId = new URL(req.url).searchParams.get("serviceId");
@@ -40,10 +40,12 @@ export async function GET(req: Request, ctx: Ctx) {
       openTime: shop.openTime,
       closeTime: shop.closeTime,
       workDays: shop.workDays,
-      pix: features.pix && Boolean(shop.pixKey),
-      mercadopago: features.mercadopago && Boolean(shop.mpAccessEnc),
-      services: shop.services,
+      pix: live && features.pix && Boolean(shop.pixKey),
+      mercadopago: live && features.mercadopago && Boolean(shop.mpAccessEnc),
+      services: live ? shop.services : [],
+      live,
+      approved: shop.approved,
     },
-    slots,
+    slots: live ? slots : [],
   });
 }

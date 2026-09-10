@@ -55,6 +55,22 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum PaymentKind {
+  SERVICE
+  SUBSCRIPTION
+}
+
+enum PlanInterval {
+  MONTHLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  PAST_DUE
+}
+
 model User {
   id            String     @id @default(cuid())
   email         String     @unique
@@ -67,6 +83,8 @@ model User {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
+  shopId        String?
+  shop          BarberProfile? @relation("ShopMembers", fields: [shopId], references: [id], onDelete: SetNull)
   barberProfile BarberProfile?
   tokens        AuthToken[]
   clientsOwned  BarberClient[] @relation("BarberClients")
@@ -74,6 +92,8 @@ model User {
   appointments  Appointment[]  @relation("ClientAppointments")
   payments      Payment[]      @relation("ClientPayments")
   auditLogs     AuditLog[]
+
+  @@index([shopId])
 }
 
 model AuthToken {
@@ -101,18 +121,46 @@ model BarberProfile {
   openTime    String     @default("09:00")
   closeTime   String     @default("20:00")
   workDays    Int[]      @default([1, 2, 3, 4, 5, 6])
-  pixKey      String     @default("")
-  pixKeyType  PixKeyType @default(RANDOM)
-  mpPublicKey String     @default("")
-  mpAccessEnc String     @default("")
-  features    Json       @default("{\"agenda\":true,\"clients\":true,\"services\":true,\"pix\":true,\"mercadopago\":true,\"publicShop\":true}")
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  pixKey             String             @default("")
+  pixKeyType         PixKeyType         @default(RANDOM)
+  mpPublicKey        String             @default("")
+  mpAccessEnc        String             @default("")
+  planId             String?
+  plan               Plan?              @relation(fields: [planId], references: [id], onDelete: SetNull)
+  subscriptionStatus SubscriptionStatus @default(PENDING)
+  features           Json               @default("{\"agenda\":true,\"clients\":true,\"services\":true,\"pix\":true,\"mercadopago\":true,\"publicShop\":true}")
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
+  members      User[]          @relation("ShopMembers")
   services     Service[]
   clients      BarberClient[]
   appointments Appointment[]
   payments     Payment[]
+}
+
+model Plan {
+  id          String       @id @default(cuid())
+  name        String
+  slug        String       @unique
+  description String       @default("")
+  priceCents  Int
+  interval    PlanInterval @default(MONTHLY)
+  active      Boolean      @default(true)
+  sortOrder   Int          @default(0)
+  features    Json         @default("{\"agenda\":true,\"clients\":true,\"services\":true,\"pix\":true,\"mercadopago\":true,\"publicShop\":true}")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  barbers     BarberProfile[]
+}
+
+model PlatformSettings {
+  id          String     @id @default("platform")
+  pixKey      String     @default("")
+  pixKeyType  PixKeyType @default(RANDOM)
+  mpPublicKey String     @default("")
+  mpAccessEnc String     @default("")
+  updatedAt   DateTime   @updatedAt
 }
 
 model Service {
@@ -184,6 +232,7 @@ model Payment {
   user           User?          @relation("ClientPayments", fields: [userId], references: [id], onDelete: SetNull)
   amountCents    Int
   method         PaymentMethod
+  kind           PaymentKind    @default(SERVICE)
   status         PaymentStatus  @default(PENDING)
   pixPayload     String?
   pixTxid        String?

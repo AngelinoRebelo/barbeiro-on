@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { setSessionCookie } from "@/lib/session";
+import { issueSession, redirectHome } from "@/lib/auth";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
@@ -9,7 +9,7 @@ export async function POST(req: Request) {
 
   const record = await prisma.authToken.findUnique({
     where: { token },
-    include: { user: true },
+    include: { user: { include: { barberProfile: true, shop: true } } },
   });
   if (!record || record.type !== "EMAIL_VERIFY" || record.expiresAt < new Date()) {
     return NextResponse.json({ error: "Link expirado ou inválido." }, { status: 400 });
@@ -23,14 +23,6 @@ export async function POST(req: Request) {
     prisma.authToken.deleteMany({ where: { userId: record.userId, type: "EMAIL_VERIFY" } }),
   ]);
 
-  await setSessionCookie({
-    sub: record.user.id,
-    role: record.user.role,
-    email: record.user.email,
-    name: record.user.name,
-  });
-
-  const dest =
-    record.user.role === "ADMIN" ? "/admin" : record.user.role === "BARBER" ? "/painel" : "/portal";
-  return NextResponse.json({ ok: true, redirect: dest });
+  await issueSession(record.user);
+  return NextResponse.json({ ok: true, redirect: redirectHome(record.user) });
 }

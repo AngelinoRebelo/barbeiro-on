@@ -12,6 +12,7 @@ type Row = {
   role: string;
   status: string;
   shopName: string | null;
+  slug: string | null;
   approved: boolean | null;
   features: FeatureFlags | null;
 };
@@ -61,13 +62,18 @@ export default function UsuariosPage() {
                 <Link href={`/admin/usuarios/${u.id}`} className="text-lg font-medium hover:text-gold">
                   {u.name}
                 </Link>
-                <p className="text-sm text-[#8b93a7]">{u.email}{u.shopName ? ` · ${u.shopName}` : ""}</p>
+                <p className="text-sm text-[#8b93a7]">{u.email}{u.shopName ? ` · ${u.shopName}` : ""}{u.slug ? ` · /${u.slug}` : ""}</p>
               </div>
               <div className="flex gap-2">
                 <Badge>{u.role}</Badge>
                 <Badge tone={u.status === "ACTIVE" ? "cyan" : u.status === "SUSPENDED" ? "danger" : "muted"}>{u.status}</Badge>
                 {u.approved === false && <Badge tone="danger">aguardando</Badge>}
                 {u.approved === true && <Badge tone="cyan">aprovado</Badge>}
+                {u.slug && (
+                  <Link className="text-sm text-gold" href={`/${u.slug}`}>
+                    /{u.slug}
+                  </Link>
+                )}
               </div>
             </div>
             <div className="flex flex-wrap gap-2">

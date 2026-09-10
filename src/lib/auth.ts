@@ -1,14 +1,51 @@
 import { prisma } from "./prisma";
-import { getSession, type SessionUser } from "./session";
+import { getSession, setSessionCookie, type SessionUser } from "./session";
 import { parseFeatures, type FeatureFlags } from "./features";
+import { homePath, shopPath } from "./paths";
 import { redirect } from "next/navigation";
+import type { User, BarberProfile, Plan } from "@prisma/client";
+
+const userInclude = {
+  barberProfile: { include: { plan: true } },
+  shop: true,
+} as const;
+
+type FullUser = User & {
+  barberProfile: (BarberProfile & { plan: Plan | null }) | null;
+  shop: BarberProfile | null;
+};
+
+export async function sessionPayload(user: {
+  id: string;
+  role: SessionUser["role"];
+  email: string;
+  name: string;
+  barberProfile?: { slug: string } | null;
+  shop?: { slug: string } | null;
+}): Promise<SessionUser> {
+  return {
+    sub: user.id,
+    role: user.role,
+    email: user.email,
+    name: user.name,
+    slug: user.barberProfile?.slug || user.shop?.slug,
+  };
+}
+
+export async function issueSession(user: Parameters<typeof sessionPayload>[0]) {
+  await setSessionCookie(await sessionPayload(user));
+}
+
+export function redirectHome(user: Parameters<typeof sessionPayload>[0]) {
+  return homePath(user.role, user.barberProfile?.slug || user.shop?.slug);
+}
 
 export async function requireUser() {
   const session = await getSession();
   if (!session) redirect("/login");
   const user = await prisma.user.findUnique({
     where: { id: session.sub },
-    include: { barberProfile: true },
+    include: userInclude,
   });
   if (!user) redirect("/login");
   if (user.status === "SUSPENDED") redirect("/login?erro=suspenso");
@@ -17,26 +54,33 @@ export async function requireUser() {
 
 export async function requireAdmin() {
   const ctx = await requireUser();
-  if (ctx.user.role !== "ADMIN") redirect("/painel");
+  if (ctx.user.role !== "ADMIN") redirect(redirectHome(ctx.user));
   return ctx;
 }
 
-export async function requireBarber() {
+export async function requireBarber(expectedSlug?: string) {
   const ctx = await requireUser();
   if (ctx.user.role === "ADMIN") redirect("/admin");
-  if (ctx.user.role !== "BARBER" || !ctx.user.barberProfile) redirect("/portal");
-  if (!ctx.user.barberProfile.approved) redirect("/painel/aguardando");
+  if (ctx.user.role !== "BARBER" || !ctx.user.barberProfile) redirect("/login");
+  const profile = ctx.user.barberProfile;
+  if (expectedSlug && expectedSlug !== profile.slug) redirect(shopPath(profile.slug, "/painel"));
+  if (!profile.approved) redirect(shopPath(profile.slug, "/painel/aguardando"));
+  const paid = profile.subscriptionStatus === "ACTIVE" || (profile.plan && profile.plan.priceCents === 0);
+  if (!paid) redirect(shopPath(profile.slug, "/painel/plano"));
   return {
     ...ctx,
-    profile: ctx.user.barberProfile,
-    features: parseFeatures(ctx.user.barberProfile.features),
+    profile,
+    features: parseFeatures(profile.features),
   };
 }
 
-export async function requireClient() {
+export async function requireClient(expectedSlug?: string) {
   const ctx = await requireUser();
   if (ctx.user.role === "ADMIN") redirect("/admin");
-  if (ctx.user.role === "BARBER") redirect("/painel");
+  if (ctx.user.role === "BARBER") redirect(redirectHome(ctx.user));
+  const slug = ctx.user.shop?.slug;
+  if (!slug) redirect("/login");
+  if (expectedSlug && expectedSlug !== slug) redirect(shopPath(slug, "/portal"));
   return ctx;
 }
 
@@ -45,7 +89,7 @@ export async function apiUser() {
   if (!session) return null;
   const user = await prisma.user.findUnique({
     where: { id: session.sub },
-    include: { barberProfile: true },
+    include: userInclude,
   });
   if (!user || user.status === "SUSPENDED") return null;
   return { session, user };
@@ -60,3 +104,4 @@ export function hasFeature(features: FeatureFlags, key: keyof FeatureFlags) {
 }
 
 export type Authed = { session: SessionUser };
+export type { FullUser };

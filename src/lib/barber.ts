@@ -1,11 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/utils";
+import { isReservedSlug } from "@/lib/paths";
 
 export async function uniqueSlug(name: string) {
-  const base = slugify(name);
+  let base = slugify(name);
+  if (isReservedSlug(base)) base = `loja-${base}`;
   let slug = base;
   let i = 1;
-  while (await prisma.barberProfile.findUnique({ where: { slug } })) {
+  while (isReservedSlug(slug) || (await prisma.barberProfile.findUnique({ where: { slug } }))) {
     slug = `${base}-${i++}`;
   }
   return slug;

@@ -21,21 +21,18 @@ export default function HomePage() {
           A rede das unidades que cortam o futuro.
         </h1>
         <p className="mt-6 max-w-2xl text-lg text-[#8b93a7]">
-          Admin governa quem entra. O barbeiro opera clientes, agenda e caixa. PIX nativo e Mercado Pago no cartão — com login confirmado por e-mail BARBEIRO_ON.
+          Cada barbearia vive no próprio endereço. O barbeiro escolhe o plano definido pelo admin, cadastra PIX e Mercado Pago para receber pelos cortes, e compartilha /nome-da-loja com os clientes.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link href="/cadastro">
             <Button>Ativar minha barbearia</Button>
           </Link>
-          <Link href="/cadastro">
-            <Button variant="cyan">Agendar como cliente</Button>
-          </Link>
         </div>
         <div className="mt-16 grid gap-4 md:grid-cols-3">
           {[
-            ["01 · Admin", "Aprova barbeiros, suspende contas e liga módulos: agenda, PIX, Mercado Pago, vitrine."],
-            ["02 · Unidade", "Cadastro de clientes, serviços de cabelo e barba, agenda do dia e QR da loja."],
-            ["03 · Caixa", "Chave PIX do contratante + token Mercado Pago. QR copia-e-cola e checkout no cartão."],
+            ["01 · Admin", "Define planos, PIX e Mercado Pago da plataforma, aprova unidades e módulos."],
+            ["02 · Unidade /nome", "Cada barbeiro ganha um diretório próprio. O painel abre em /sua-loja/painel."],
+            ["03 · Cliente na loja", "O cliente entra pelo link da barbearia, cria conta ali e agenda naquela unidade."],
           ].map(([title, body]) => (
             <article key={title} className="glass rounded-3xl p-6">
               <h2 className="text-gold">{title}</h2>

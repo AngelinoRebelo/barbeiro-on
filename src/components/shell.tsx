@@ -8,17 +8,19 @@ export function AppShell({
   subtitle,
   nav,
   children,
+  homeHref = "/",
 }: {
   title: string;
   subtitle: string;
   nav: { href: string; label: string; active?: boolean }[];
   children: React.ReactNode;
+  homeHref?: string;
 }) {
   return (
     <div className="grid-bg min-h-screen">
       <div className="mx-auto grid min-h-screen max-w-7xl grid-cols-1 lg:grid-cols-[240px_1fr]">
         <aside className="border-b border-[rgba(212,175,55,0.14)] p-5 lg:border-b-0 lg:border-r">
-          <Logo />
+          <Logo href={homeHref} />
           <p className="mt-8 text-[11px] uppercase tracking-[0.28em] text-[#8b93a7]">{subtitle}</p>
           <nav className="mt-4 grid gap-1">
             {nav.map((item) => (

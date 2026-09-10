@@ -2,17 +2,22 @@ import Link from "next/link";
 import { requireBarber } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, Badge } from "@/components/ui";
-import { brl, formatWhen, appUrl } from "@/lib/utils";
+import { brl, formatWhen } from "@/lib/utils";
 import { qrDataUrl } from "@/lib/qr";
+import { shopPath, shopUrl } from "@/lib/paths";
 
-export default async function PainelHome() {
-  const { profile, features } = await requireBarber();
-  const shopUrl = `${appUrl()}/s/${profile.slug}`;
-  const qr = await qrDataUrl(shopUrl);
+export default async function PainelHome({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const { profile, features } = await requireBarber(slug);
+  const url = shopUrl(profile.slug);
+  const qr = await qrDataUrl(url);
   const [clients, appointments, paid] = await Promise.all([
     prisma.barberClient.count({ where: { barberId: profile.id } }),
     prisma.appointment.count({ where: { barberId: profile.id, status: { in: ["SCHEDULED", "CONFIRMED"] } } }),
-    prisma.payment.aggregate({ where: { barberId: profile.id, status: "PAID" }, _sum: { amountCents: true } }),
+    prisma.payment.aggregate({
+      where: { barberId: profile.id, status: "PAID", kind: "SERVICE" },
+      _sum: { amountCents: true },
+    }),
   ]);
   const today = await prisma.appointment.findMany({
     where: {
@@ -54,16 +59,15 @@ export default async function PainelHome() {
         </div>
       </Card>
       <Card>
-        <h2>Entrada da unidade</h2>
-        <p className="mt-2 text-sm text-[#8b93a7]">QR e código para a página pública. Sem FileLink: o cliente entra por este link.</p>
+        <h2>Link da unidade</h2>
+        <p className="mt-2 text-sm text-[#8b93a7]">Compartilhe este endereço e o QR. O cliente entra já nesta barbearia e cria a conta aqui.</p>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={qr} alt="QR da barbearia" className="mt-4 w-44 rounded-2xl" />
-        <p className="mt-3 font-mono text-xs break-all text-gold">{shopUrl}</p>
-        {features.publicShop ? (
-          <Link className="mt-4 inline-block text-sm text-cyan" href={`/s/${profile.slug}`}>Abrir vitrine</Link>
-        ) : (
-          <p className="mt-4 text-sm text-[#ff5d73]">Vitrine desligada pelo admin.</p>
-        )}
+        <p className="mt-3 font-mono text-xs break-all text-gold">{url}</p>
+        <Link className="mt-4 inline-block text-sm text-cyan" href={shopPath(profile.slug)}>
+          Abrir {shopPath(profile.slug)}
+        </Link>
+        {!features.publicShop && <p className="mt-2 text-sm text-[#ff5d73]">Vitrine desligada pelo plano/admin.</p>}
       </Card>
     </div>
   );

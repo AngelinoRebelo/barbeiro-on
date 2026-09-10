@@ -4,9 +4,9 @@ Plataforma SaaS para barbearias: admin da rede, painel do barbeiro contratante, 
 
 ## Papéis
 
-- **Admin** (`machaddoo@gmail.com`): aprova unidades, suspende contas e liga/desliga módulos.
-- **Barbeiro**: clientes, serviços (cabelo/barba), agenda, chave PIX e token Mercado Pago.
-- **Cliente**: cadastro com e-mail, agendamento na vitrine pública e pagamento.
+- **Admin** (`machaddoo@gmail.com`): planos e preços, PIX/Mercado Pago da plataforma, aprovação de unidades.
+- **Barbeiro**: ao cadastrar, nasce `/{nome-da-barbearia}`; o painel abre em `/{slug}/painel`. Cadastra PIX/MP próprios para receber pelos serviços.
+- **Cliente**: entra pelo link da loja, cria conta em `/{slug}/cadastro` e agenda só naquela unidade.
 
 ## E-mail (Brevo)
 

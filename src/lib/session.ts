@@ -9,6 +9,7 @@ export type SessionUser = {
   role: Role;
   email: string;
   name: string;
+  slug?: string;
 };
 
 function secret() {
@@ -22,6 +23,7 @@ export async function signSession(user: SessionUser) {
     role: user.role,
     email: user.email,
     name: user.name,
+    slug: user.slug || "",
   })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(user.sub)
@@ -39,6 +41,7 @@ export async function readSessionToken(token: string): Promise<SessionUser | nul
       role: payload.role as Role,
       email: String(payload.email),
       name: String(payload.name || ""),
+      slug: payload.slug ? String(payload.slug) : undefined,
     };
   } catch {
     return null;

@@ -13,6 +13,8 @@ type Shop = {
   barberName: string;
   pix: boolean;
   mercadopago: boolean;
+  live?: boolean;
+  approved?: boolean;
   services: { id: string; name: string; category: string; durationMin: number; priceCents: number }[];
 };
 
@@ -53,12 +55,12 @@ export function ShopBooker({ slug, initialQr }: { slug: string; initialQr: strin
     });
     const data = await res.json();
     if (!res.ok) {
-      if (res.status === 401) return router.push("/login");
+      if (res.status === 401) return router.push(`/${slug}/login`);
       return setMsg(data.error);
     }
     if (!method) {
       setMsg("Horário reservado.");
-      router.push("/portal/agenda");
+      router.push(`/${slug}/portal/agenda`);
       return;
     }
     const pay = await fetch("/api/payments/create", {
@@ -109,9 +111,15 @@ export function ShopBooker({ slug, initialQr }: { slug: string; initialQr: strin
         </div>
         {msg && <p className="mt-3 text-sm text-cyan">{msg}</p>}
         <div className="mt-6 flex flex-wrap gap-2">
-          <Button onClick={() => book()} disabled={!time}>Reservar</Button>
-          {shop.pix && <Button variant="ghost" onClick={() => book("PIX")} disabled={!time}>Reservar + PIX</Button>}
-          {shop.mercadopago && <Button variant="cyan" onClick={() => book("MERCADOPAGO")} disabled={!time}>Reservar + cartão</Button>}
+          {shop.live === false ? (
+            <p className="text-sm text-gold">Agenda libera quando o admin aprovar a unidade. Crie sua conta nesta barbearia pelo botão acima.</p>
+          ) : (
+            <>
+              <Button onClick={() => book()} disabled={!time}>Reservar</Button>
+              {shop.pix && <Button variant="ghost" onClick={() => book("PIX")} disabled={!time}>Reservar + PIX</Button>}
+              {shop.mercadopago && <Button variant="cyan" onClick={() => book("MERCADOPAGO")} disabled={!time}>Reservar + cartão</Button>}
+            </>
+          )}
         </div>
       </Card>
       <Card>
