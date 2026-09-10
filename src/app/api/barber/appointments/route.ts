@@ -4,10 +4,12 @@ import { apiUser, jsonError } from "@/lib/auth";
 import { appointmentSchema } from "@/lib/validators";
 import { parseFeatures } from "@/lib/features";
 import { combineDateTimeSP } from "@/lib/utils";
+import { hasAccess } from "@/lib/access";
 
 async function barber() {
   const ctx = await apiUser();
   if (!ctx?.user.barberProfile?.approved) return null;
+  if (!hasAccess(ctx.user.barberProfile.accessUntil)) return null;
   return { ...ctx, profile: ctx.user.barberProfile, features: parseFeatures(ctx.user.barberProfile.features) };
 }
 

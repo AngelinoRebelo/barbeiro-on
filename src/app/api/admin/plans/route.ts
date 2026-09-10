@@ -4,6 +4,7 @@ import { apiUser, jsonError } from "@/lib/auth";
 import { planSchema } from "@/lib/validators";
 import { parseFeatures, DEFAULT_FEATURES } from "@/lib/features";
 import { slugify } from "@/lib/utils";
+import { defaultDuration } from "@/lib/access";
 
 export async function GET() {
   const ctx = await apiUser();
@@ -27,6 +28,7 @@ export async function POST(req: Request) {
       description: parsed.data.description || "",
       priceCents: parsed.data.priceCents,
       interval: parsed.data.interval,
+      durationDays: parsed.data.durationDays || defaultDuration(parsed.data.interval),
       active: parsed.data.active,
       sortOrder: parsed.data.sortOrder,
       features: { ...DEFAULT_FEATURES, ...parsed.data.features },

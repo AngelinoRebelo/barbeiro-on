@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getMpPayment } from "@/lib/mercadopago";
 import { decryptSecret } from "@/lib/crypto";
 import { getPlatformSettings } from "@/lib/platform";
+import { grantPaidPeriod } from "@/lib/subscription";
 
 async function trySettle(access: string, mpId: string, rowId?: string) {
   const remote = await getMpPayment(access, mpId);
@@ -25,17 +26,14 @@ async function trySettle(access: string, mpId: string, rowId?: string) {
       paidAt: mapped === "PAID" ? new Date() : payment.paidAt,
     },
   });
-  if (mapped === "PAID" && payment.appointmentId) {
+  if (mapped === "PAID" && payment.appointmentId && payment.status !== "PAID") {
     await prisma.appointment.update({
       where: { id: payment.appointmentId },
       data: { status: "CONFIRMED" },
     });
   }
-  if (mapped === "PAID" && payment.kind === "SUBSCRIPTION") {
-    await prisma.barberProfile.update({
-      where: { id: payment.barberId },
-      data: { subscriptionStatus: "ACTIVE" },
-    });
+  if (mapped === "PAID" && payment.kind === "SUBSCRIPTION" && payment.status !== "PAID") {
+    await grantPaidPeriod(payment.barberId);
   }
   return true;
 }

@@ -4,12 +4,14 @@ import { apiUser, jsonError } from "@/lib/auth";
 import { clientSchema } from "@/lib/validators";
 import { parseFeatures } from "@/lib/features";
 import { removeShopClientAccount } from "@/lib/clients";
+import { hasAccess } from "@/lib/access";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 async function scoped(id: string) {
   const ctx = await apiUser();
   if (!ctx || ctx.user.role !== "BARBER" || !ctx.user.barberProfile) return null;
+  if (!hasAccess(ctx.user.barberProfile.accessUntil)) return null;
   const features = parseFeatures(ctx.user.barberProfile.features);
   const client = await prisma.barberClient.findFirst({
     where: { id, barberId: ctx.user.barberProfile.id },

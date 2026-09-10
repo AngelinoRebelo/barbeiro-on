@@ -1,13 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseFeatures } from "@/lib/features";
+import { getPlatformSettings } from "@/lib/platform";
 
 export async function GET() {
-  const plans = await prisma.plan.findMany({
-    where: { active: true },
-    orderBy: { sortOrder: "asc" },
-  });
+  const [plans, platform] = await Promise.all([
+    prisma.plan.findMany({
+      where: { active: true },
+      orderBy: { sortOrder: "asc" },
+    }),
+    getPlatformSettings(),
+  ]);
   return NextResponse.json({
+    trialDays: platform.trialDays,
     plans: plans.map((p) => ({
       id: p.id,
       name: p.name,
@@ -15,6 +20,7 @@ export async function GET() {
       description: p.description,
       priceCents: p.priceCents,
       interval: p.interval,
+      durationDays: p.durationDays,
       features: parseFeatures(p.features),
     })),
   });

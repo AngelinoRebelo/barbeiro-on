@@ -28,12 +28,13 @@ export async function GET(req: Request) {
         status === "ACTIVE" || status === "PENDING_EMAIL" || status === "SUSPENDED" ? { status } : {},
       ],
     },
-    include: { barberProfile: true },
+    include: { barberProfile: { include: { plan: true } } },
     orderBy: { createdAt: "desc" },
     take: 200,
   });
 
   return NextResponse.json({
+    me: ctx.user.id,
     users: users.map((u) => ({
       id: u.id,
       name: u.name,
@@ -47,6 +48,9 @@ export async function GET(req: Request) {
       slug: u.barberProfile?.slug || null,
       approved: u.barberProfile?.approved ?? null,
       features: u.barberProfile ? parseFeatures(u.barberProfile.features) : null,
+      planId: u.barberProfile?.planId || null,
+      planName: u.barberProfile?.plan?.name || null,
+      accessUntil: u.barberProfile?.accessUntil || null,
     })),
   });
 }

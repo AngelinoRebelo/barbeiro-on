@@ -8,10 +8,12 @@ export function PlanPay({
   planName,
   priceCents,
   interval,
+  durationDays,
 }: {
   planName: string;
   priceCents: number;
   interval: string;
+  durationDays?: number;
 }) {
   const [msg, setMsg] = useState("");
   async function pay(method: "PIX" | "MERCADOPAGO") {
@@ -32,6 +34,7 @@ export function PlanPay({
       <h2 className="mt-2 text-3xl">{planName}</h2>
       <p className="mt-2 text-cyan">
         {brl(priceCents)} / {interval === "YEARLY" ? "ano" : "mês"}
+        {durationDays ? ` · ${durationDays} dias de vigência` : ""}
       </p>
       <p className="mt-4 text-sm text-[#8b93a7]">
         O valor é definido pelo admin e cai na PIX/Mercado Pago da plataforma. Seus PIX e MP da unidade recebem os cortes e barbas.

@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiUser, jsonError } from "@/lib/auth";
 import type { AppointmentStatus } from "@prisma/client";
+import { hasAccess } from "@/lib/access";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function PATCH(req: Request, ctx: Ctx) {
   const auth = await apiUser();
   if (!auth?.user.barberProfile) return jsonError("Acesso negado.", 403);
+  if (!hasAccess(auth.user.barberProfile.accessUntil)) return jsonError("Assinatura vencida. Renove o plano.", 402);
   const { id } = await ctx.params;
   const body = await req.json().catch(() => ({}));
   const existing = await prisma.appointment.findFirst({

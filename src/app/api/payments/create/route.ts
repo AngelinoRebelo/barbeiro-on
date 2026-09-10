@@ -8,6 +8,7 @@ import { decryptSecret } from "@/lib/crypto";
 import { randomToken } from "@/lib/utils";
 import { getPlatformSettings } from "@/lib/platform";
 import { shopPath } from "@/lib/paths";
+import { grantPaidPeriod } from "@/lib/subscription";
 
 export async function POST(req: Request) {
   const ctx = await apiUser();
@@ -23,7 +24,7 @@ export async function POST(req: Request) {
     });
     if (!profile?.plan) return jsonError("Nenhum plano selecionado.");
     if (profile.plan.priceCents === 0) {
-      await prisma.barberProfile.update({ where: { id: profile.id }, data: { subscriptionStatus: "ACTIVE" } });
+      await grantPaidPeriod(profile.id);
       return NextResponse.json({ ok: true, redirect: shopPath(profile.slug, "/painel") });
     }
     const platform = await getPlatformSettings();
@@ -178,16 +179,14 @@ export async function PATCH(req: Request) {
     if (!isBarber && ctx.user.role !== "ADMIN") return jsonError("Somente o barbeiro confirma PIX manualmente.", 403);
   }
   if (payment.method !== "PIX") return jsonError("Confirmação manual apenas para PIX.");
+  if (payment.status === "PAID") return NextResponse.json({ ok: true });
 
   await prisma.payment.update({
     where: { id },
     data: { status: "PAID", paidAt: new Date() },
   });
   if (payment.kind === "SUBSCRIPTION") {
-    await prisma.barberProfile.update({
-      where: { id: payment.barberId },
-      data: { subscriptionStatus: "ACTIVE" },
-    });
+    await grantPaidPeriod(payment.barberId);
   }
   if (payment.appointmentId) {
     await prisma.appointment.update({

@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import { getSession, setSessionCookie, type SessionUser } from "./session";
 import { parseFeatures, type FeatureFlags } from "./features";
 import { homePath, shopPath } from "./paths";
+import { hasAccess } from "./access";
 import { redirect } from "next/navigation";
 import type { User, BarberProfile, Plan } from "@prisma/client";
 
@@ -65,8 +66,7 @@ export async function requireBarber(expectedSlug?: string) {
   const profile = ctx.user.barberProfile;
   if (expectedSlug && expectedSlug !== profile.slug) redirect(shopPath(profile.slug, "/painel"));
   if (!profile.approved) redirect(shopPath(profile.slug, "/painel/aguardando"));
-  const paid = profile.subscriptionStatus === "ACTIVE" || (profile.plan && profile.plan.priceCents === 0);
-  if (!paid) redirect(shopPath(profile.slug, "/painel/plano"));
+  if (!hasAccess(profile.accessUntil)) redirect(shopPath(profile.slug, "/painel/plano"));
   return {
     ...ctx,
     profile,
@@ -97,6 +97,19 @@ export async function apiUser() {
 
 export function jsonError(message: string, status = 400) {
   return Response.json({ error: message }, { status });
+}
+
+export async function apiBarber() {
+  const ctx = await apiUser();
+  if (!ctx || ctx.user.role !== "BARBER" || !ctx.user.barberProfile) return null;
+  const profile = ctx.user.barberProfile;
+  if (!profile.approved) return { error: jsonError("Barbearia aguardando aprovação.", 403) };
+  if (!hasAccess(profile.accessUntil)) return { error: jsonError("Assinatura vencida. Renove o plano.", 402) };
+  return {
+    ctx,
+    profile,
+    features: parseFeatures(profile.features),
+  };
 }
 
 export function hasFeature(features: FeatureFlags, key: keyof FeatureFlags) {

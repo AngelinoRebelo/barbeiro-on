@@ -13,6 +13,7 @@ type Plan = {
   description: string;
   priceCents: number;
   interval: string;
+  durationDays: number;
   features: FeatureFlags;
 };
 
@@ -81,6 +82,7 @@ export function LoginForm({ shopSlug }: { shopSlug?: string }) {
 
 export function BarberRegisterForm() {
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [trialDays, setTrialDays] = useState(30);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -103,6 +105,7 @@ export function BarberRegisterForm() {
       .then((r) => r.json())
       .then((d) => {
         setPlans(d.plans || []);
+        if (typeof d.trialDays === "number") setTrialDays(d.trialDays);
         if (d.plans?.[0]) setForm((f) => ({ ...f, planId: f.planId || d.plans[0].id }));
       });
   }, []);
@@ -146,7 +149,7 @@ export function BarberRegisterForm() {
             >
               <div className="flex justify-between gap-3">
                 <span className="font-medium">{p.name}</span>
-                <span className="text-cyan">{brl(p.priceCents)}/{p.interval === "YEARLY" ? "ano" : "mês"}</span>
+                <span className="text-cyan">{brl(p.priceCents)}/{p.interval === "YEARLY" ? "ano" : "mês"} · {p.durationDays} dias</span>
               </div>
               <p className="mt-1 text-sm text-[#8b93a7]">{p.description}</p>
             </button>
@@ -158,6 +161,7 @@ export function BarberRegisterForm() {
               .filter(([k]) => selected.features[k as keyof FeatureFlags])
               .map(([, l]) => l)
               .join(" · ")}
+            {trialDays > 0 ? ` · ${trialDays} dias de teste ao criar a unidade` : ""}
           </p>
         )}
       </div>

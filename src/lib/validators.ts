@@ -26,6 +26,7 @@ export const planSchema = z.object({
   description: z.string().max(240).optional().default(""),
   priceCents: z.coerce.number().int().min(0),
   interval: z.enum(["MONTHLY", "YEARLY"]).optional().default("MONTHLY"),
+  durationDays: z.coerce.number().int().min(1).max(3650).optional(),
   active: z.boolean().optional().default(true),
   sortOrder: z.coerce.number().int().optional().default(0),
   features: z

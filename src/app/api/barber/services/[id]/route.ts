@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiUser, jsonError } from "@/lib/auth";
 import { serviceSchema } from "@/lib/validators";
+import { hasAccess } from "@/lib/access";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function PATCH(req: Request, ctx: Ctx) {
   const auth = await apiUser();
   if (!auth?.user.barberProfile) return jsonError("Acesso negado.", 403);
+  if (!hasAccess(auth.user.barberProfile.accessUntil)) return jsonError("Assinatura vencida. Renove o plano.", 402);
   const { id } = await ctx.params;
   const existing = await prisma.service.findFirst({ where: { id, barberId: auth.user.barberProfile.id } });
   if (!existing) return jsonError("Serviço não encontrado.", 404);
@@ -20,6 +22,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
 export async function DELETE(_: Request, ctx: Ctx) {
   const auth = await apiUser();
   if (!auth?.user.barberProfile) return jsonError("Acesso negado.", 403);
+  if (!hasAccess(auth.user.barberProfile.accessUntil)) return jsonError("Assinatura vencida. Renove o plano.", 402);
   const { id } = await ctx.params;
   const existing = await prisma.service.findFirst({ where: { id, barberId: auth.user.barberProfile.id } });
   if (!existing) return jsonError("Serviço não encontrado.", 404);

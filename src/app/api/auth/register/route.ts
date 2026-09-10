@@ -8,6 +8,8 @@ import { uniqueSlug, DEFAULT_SERVICES } from "@/lib/barber";
 import { parseFeatures } from "@/lib/features";
 import { encryptSecret } from "@/lib/crypto";
 import { shopPath, shopUrl } from "@/lib/paths";
+import { getPlatformSettings } from "@/lib/platform";
+import { addDays } from "@/lib/access";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
@@ -139,6 +141,8 @@ export async function POST(req: Request) {
   const slug = await uniqueSlug(shopName);
   const features = parseFeatures(plan.features);
   const mpAccessEnc = parsed.data.mpAccessToken?.trim() ? encryptSecret(parsed.data.mpAccessToken.trim()) : "";
+  const platform = await getPlatformSettings();
+  const trialDays = Math.max(0, platform.trialDays || 0);
 
   const user = await prisma.user.create({
     data: {
@@ -157,7 +161,8 @@ export async function POST(req: Request) {
           slug,
           planId: plan.id,
           features,
-          subscriptionStatus: plan.priceCents === 0 ? "ACTIVE" : "PENDING",
+          subscriptionStatus: trialDays > 0 || plan.priceCents === 0 ? "ACTIVE" : "PENDING",
+          accessUntil: trialDays > 0 ? addDays(new Date(), trialDays) : null,
           pixKey: parsed.data.pixKey?.trim() || "",
           pixKeyType: parsed.data.pixKeyType || "RANDOM",
           mpPublicKey: parsed.data.mpPublicKey?.trim() || "",

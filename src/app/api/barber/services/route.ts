@@ -3,10 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { apiUser, jsonError } from "@/lib/auth";
 import { serviceSchema } from "@/lib/validators";
 import { parseFeatures } from "@/lib/features";
+import { hasAccess } from "@/lib/access";
 
 async function barber() {
   const ctx = await apiUser();
   if (!ctx || ctx.user.role !== "BARBER" || !ctx.user.barberProfile?.approved) return null;
+  if (!hasAccess(ctx.user.barberProfile.accessUntil)) return null;
   return { ...ctx, profile: ctx.user.barberProfile, features: parseFeatures(ctx.user.barberProfile.features) };
 }
 

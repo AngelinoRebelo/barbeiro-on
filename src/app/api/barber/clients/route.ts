@@ -1,14 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { apiUser, jsonError } from "@/lib/auth";
+import { apiBarber, jsonError } from "@/lib/auth";
 import { clientSchema } from "@/lib/validators";
-import { parseFeatures } from "@/lib/features";
 
 async function barberCtx() {
-  const ctx = await apiUser();
-  if (!ctx || ctx.user.role !== "BARBER" || !ctx.user.barberProfile) return null;
-  if (!ctx.user.barberProfile.approved) return { error: jsonError("Barbearia aguardando aprovação.", 403) };
-  return { ctx, profile: ctx.user.barberProfile, features: parseFeatures(ctx.user.barberProfile.features) };
+  return apiBarber();
 }
 
 export async function GET() {

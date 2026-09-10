@@ -38,6 +38,13 @@ export function formatWhen(date: Date) {
   }).format(date);
 }
 
+export function formatDay(date: Date) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    dateStyle: "short",
+  }).format(date);
+}
+
 export function ymd(date: Date) {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Sao_Paulo",

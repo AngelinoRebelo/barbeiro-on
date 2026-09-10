@@ -3,14 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { Card, Badge } from "@/components/ui";
 import { parseFeatures, FEATURE_LABELS } from "@/lib/features";
-import { formatWhen } from "@/lib/utils";
+import { formatWhen, formatDay } from "@/lib/utils";
 
 export default async function UserDetail({ params }: { params: Promise<{ id: string }> }) {
   await requireAdmin();
   const { id } = await params;
   const user = await prisma.user.findUnique({
     where: { id },
-    include: { barberProfile: { include: { _count: { select: { clients: true, appointments: true, services: true } } } } },
+    include: { barberProfile: { include: { plan: true, _count: { select: { clients: true, appointments: true, services: true } } } } },
   });
   if (!user) notFound();
   const features = user.barberProfile ? parseFeatures(user.barberProfile.features) : null;
@@ -28,7 +28,9 @@ export default async function UserDetail({ params }: { params: Promise<{ id: str
         <div><dt className="text-[#8b93a7]">E-mail verificado</dt><dd>{user.emailVerified ? formatWhen(user.emailVerified) : "não"}</dd></div>
         {user.barberProfile && (
           <>
-            <div><dt className="text-[#8b93a7]">Unidade</dt><dd>{user.barberProfile.shopName} · /s/{user.barberProfile.slug}</dd></div>
+            <div><dt className="text-[#8b93a7]">Unidade</dt><dd>{user.barberProfile.shopName} · /{user.barberProfile.slug}</dd></div>
+            <div><dt className="text-[#8b93a7]">Plano</dt><dd>{user.barberProfile.plan?.name || "sem plano"}{user.barberProfile.plan ? ` · ${user.barberProfile.plan.durationDays} dias` : ""}</dd></div>
+            <div><dt className="text-[#8b93a7]">Vigência</dt><dd>{user.barberProfile.accessUntil ? formatDay(user.barberProfile.accessUntil) : "sem acesso"}</dd></div>
             <div><dt className="text-[#8b93a7]">Clientes / agenda / serviços</dt><dd>{user.barberProfile._count.clients} / {user.barberProfile._count.appointments} / {user.barberProfile._count.services}</dd></div>
             <div><dt className="text-[#8b93a7]">PIX</dt><dd>{user.barberProfile.pixKey || "não cadastrado"}</dd></div>
             <div><dt className="text-[#8b93a7]">Mercado Pago</dt><dd>{user.barberProfile.mpAccessEnc ? "conectado" : "pendente"}</dd></div>

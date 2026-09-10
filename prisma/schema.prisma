@@ -128,6 +128,7 @@ model BarberProfile {
   planId             String?
   plan               Plan?              @relation(fields: [planId], references: [id], onDelete: SetNull)
   subscriptionStatus SubscriptionStatus @default(PENDING)
+  accessUntil        DateTime?
   features           Json               @default("{\"agenda\":true,\"clients\":true,\"services\":true,\"pix\":true,\"mercadopago\":true,\"publicShop\":true}")
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
@@ -146,6 +147,7 @@ model Plan {
   description String       @default("")
   priceCents  Int
   interval    PlanInterval @default(MONTHLY)
+  durationDays Int         @default(30)
   active      Boolean      @default(true)
   sortOrder   Int          @default(0)
   features    Json         @default("{\"agenda\":true,\"clients\":true,\"services\":true,\"pix\":true,\"mercadopago\":true,\"publicShop\":true}")
@@ -160,6 +162,7 @@ model PlatformSettings {
   pixKeyType  PixKeyType @default(RANDOM)
   mpPublicKey String     @default("")
   mpAccessEnc String     @default("")
+  trialDays   Int        @default(30)
   updatedAt   DateTime   @updatedAt
 }
 

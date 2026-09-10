@@ -5,6 +5,7 @@ import { DEFAULT_FEATURES, parseFeatures, type FeatureFlags } from "@/lib/featur
 import { sendApprovedEmail, sendVerifyEmail } from "@/lib/brevo";
 import { randomToken } from "@/lib/utils";
 import { logAction } from "@/lib/barber";
+import { addAccessDays, assignPlan } from "@/lib/subscription";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -58,6 +59,25 @@ export async function PATCH(req: Request, ctx: Ctx) {
     return NextResponse.json({ ok: true });
   }
 
+  if (body.action === "assignPlan") {
+    if (!user.barberProfile) return jsonError("Somente unidades recebem plano.", 400);
+    if (typeof body.planId !== "string" || !body.planId) return jsonError("Escolha um plano.");
+    const updated = await assignPlan(user.barberProfile.id, body.planId);
+    if (!updated) return jsonError("Plano não encontrado.", 404);
+    await logAction(auth.user.id, "admin.assignPlan", id, { planId: body.planId });
+    return NextResponse.json({ ok: true, accessUntil: updated.accessUntil });
+  }
+
+  if (body.action === "addDays") {
+    if (!user.barberProfile) return jsonError("Somente unidades recebem dias de acesso.", 400);
+    const days = Math.floor(Number(body.days));
+    if (!Number.isFinite(days) || days < 1 || days > 3650) return jsonError("Informe entre 1 e 3650 dias.");
+    const updated = await addAccessDays(user.barberProfile.id, days);
+    if (!updated) return jsonError("Unidade não encontrada.", 404);
+    await logAction(auth.user.id, "admin.addDays", id, { days });
+    return NextResponse.json({ ok: true, accessUntil: updated.accessUntil });
+  }
+
   const data: { status?: "ACTIVE" | "SUSPENDED" | "PENDING_EMAIL" } = {};
   if (body.status === "ACTIVE" || body.status === "SUSPENDED") data.status = body.status;
   if (Object.keys(data).length) {
@@ -82,5 +102,35 @@ export async function PATCH(req: Request, ctx: Ctx) {
   }
 
   await logAction(auth.user.id, "admin.patch", id, body);
+  return NextResponse.json({ ok: true });
+}
+
+export async function DELETE(_: Request, ctx: Ctx) {
+  const auth = await apiUser();
+  if (!auth || auth.user.role !== "ADMIN") return jsonError("Acesso negado.", 403);
+  const { id } = await ctx.params;
+  if (id === auth.user.id) return jsonError("Você não pode excluir a própria conta.", 400);
+  const user = await prisma.user.findUnique({ where: { id }, include: { barberProfile: true } });
+  if (!user) return jsonError("Usuário não encontrado.", 404);
+  if (user.role === "ADMIN") return jsonError("Não é possível excluir outro admin.", 400);
+
+  if (user.barberProfile) {
+    const barberId = user.barberProfile.id;
+    await prisma.$transaction(async (tx) => {
+      await tx.appointment.deleteMany({ where: { barberId } });
+      await tx.payment.deleteMany({ where: { barberId } });
+      await tx.barberClient.deleteMany({ where: { barberId } });
+      await tx.service.deleteMany({ where: { barberId } });
+      await tx.user.updateMany({ where: { shopId: barberId }, data: { shopId: null } });
+      await tx.user.delete({ where: { id } });
+    });
+  } else {
+    await prisma.$transaction(async (tx) => {
+      await tx.barberClient.deleteMany({ where: { userId: id } });
+      await tx.user.delete({ where: { id } });
+    });
+  }
+
+  await logAction(auth.user.id, "admin.deleteUser", id, { email: user.email, role: user.role });
   return NextResponse.json({ ok: true });
 }
