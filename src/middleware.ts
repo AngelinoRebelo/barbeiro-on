@@ -1,7 +1,28 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { SESSION_COOKIE, readSessionToken } from "@/lib/session";
+import { SESSION_COOKIE, readSessionToken, type SessionUser } from "@/lib/session";
 import { homePath, isReservedSlug } from "@/lib/paths";
+
+function dropSession(res: NextResponse) {
+  res.cookies.set(SESSION_COOKIE, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 0,
+  });
+  return res;
+}
+
+function sendTo(req: NextRequest, dest: string | null, fallback: string) {
+  const target = dest || fallback;
+  if (target === req.nextUrl.pathname) return null;
+  return NextResponse.redirect(new URL(target, req.url));
+}
+
+function homeOf(session: SessionUser) {
+  return homePath(session.role, session.slug);
+}
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -11,21 +32,18 @@ export async function middleware(req: NextRequest) {
 
   const token = req.cookies.get(SESSION_COOKIE)?.value;
   const session = token ? await readSessionToken(token) : null;
-  const slug = session?.slug;
 
   if (pathname.startsWith("/admin")) {
     if (!session) return NextResponse.redirect(new URL("/login", req.url));
-    if (session.role !== "ADMIN") return NextResponse.redirect(new URL(homePath(session.role, slug), req.url));
+    if (session.role !== "ADMIN") {
+      return sendTo(req, homeOf(session), "/login") ?? dropSession(NextResponse.redirect(new URL("/login", req.url)));
+    }
   }
 
-  if (pathname === "/painel" || pathname.startsWith("/painel/")) {
+  if (pathname === "/painel" || pathname.startsWith("/painel/") || pathname === "/portal" || pathname.startsWith("/portal/")) {
     if (!session) return NextResponse.redirect(new URL("/login", req.url));
-    return NextResponse.redirect(new URL(homePath(session.role, slug), req.url));
-  }
-
-  if (pathname === "/portal" || pathname.startsWith("/portal/")) {
-    if (!session) return NextResponse.redirect(new URL("/login", req.url));
-    return NextResponse.redirect(new URL(homePath(session.role, slug), req.url));
+    const dest = homeOf(session);
+    return sendTo(req, dest, "/login") ?? dropSession(NextResponse.redirect(new URL("/login", req.url)));
   }
 
   const parts = pathname.split("/").filter(Boolean);
@@ -36,7 +54,7 @@ export async function middleware(req: NextRequest) {
     if (!session) return NextResponse.redirect(new URL(`/${maybeSlug}/login`, req.url));
     if (session.role === "ADMIN") return NextResponse.redirect(new URL("/admin", req.url));
     if (session.role !== "BARBER" || session.slug !== maybeSlug) {
-      return NextResponse.redirect(new URL(homePath(session.role, slug), req.url));
+      return sendTo(req, homeOf(session), `/${maybeSlug}/login`) ?? NextResponse.redirect(new URL(`/${maybeSlug}/login`, req.url));
     }
   }
 
@@ -44,12 +62,17 @@ export async function middleware(req: NextRequest) {
     if (!session) return NextResponse.redirect(new URL(`/${maybeSlug}/login`, req.url));
     if (session.role === "ADMIN") return NextResponse.redirect(new URL("/admin", req.url));
     if (session.role !== "CLIENT" || session.slug !== maybeSlug) {
-      return NextResponse.redirect(new URL(homePath(session.role, slug), req.url));
+      return sendTo(req, homeOf(session), `/${maybeSlug}/login`) ?? NextResponse.redirect(new URL(`/${maybeSlug}/login`, req.url));
     }
   }
 
-  if ((pathname === "/login" || pathname === "/cadastro") && session) {
-    return NextResponse.redirect(new URL(homePath(session.role, slug), req.url));
+  if (pathname === "/login" || pathname === "/cadastro") {
+    if (session) {
+      const dest = homeOf(session);
+      const redirected = sendTo(req, dest, pathname);
+      if (redirected) return redirected;
+      return dropSession(NextResponse.next());
+    }
   }
 
   return NextResponse.next();

@@ -31,10 +31,9 @@ export function shopUrl(slug: string, suffix = "") {
   return `${appUrl()}${shopPath(slug, suffix)}`;
 }
 
-export function homePath(role: string, slug?: string | null) {
+export function homePath(role: string, slug?: string | null): string | null {
   if (role === "ADMIN") return "/admin";
   if (role === "BARBER" && slug) return shopPath(slug, "/painel");
   if (role === "CLIENT" && slug) return shopPath(slug, "/portal");
-  if (role === "BARBER") return "/login";
-  return "/login";
+  return null;
 }

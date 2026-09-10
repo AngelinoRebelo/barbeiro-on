@@ -37,7 +37,7 @@ export async function issueSession(user: Parameters<typeof sessionPayload>[0]) {
 }
 
 export function redirectHome(user: Parameters<typeof sessionPayload>[0]) {
-  return homePath(user.role, user.barberProfile?.slug || user.shop?.slug);
+  return homePath(user.role, user.barberProfile?.slug || user.shop?.slug) || "/login";
 }
 
 export async function requireUser() {

@@ -7,10 +7,10 @@ export default function HomePage() {
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
         <Logo />
         <div className="flex gap-3">
-          <Link href="/login">
+          <Link href="/login" prefetch={false}>
             <Button variant="ghost">Entrar</Button>
           </Link>
-          <Link href="/cadastro">
+          <Link href="/cadastro" prefetch={false}>
             <Button>Contratar</Button>
           </Link>
         </div>
