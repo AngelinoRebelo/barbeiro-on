@@ -3,7 +3,7 @@ import { Card } from "@/components/ui";
 import { redirect } from "next/navigation";
 import { shopPath } from "@/lib/paths";
 import { PlanPay } from "@/components/plan-pay";
-import { canRenewPlan, daysLeft, hasAccess, isOnTrial, renewOpensAt } from "@/lib/access";
+import { canPayPlan, daysLeft, hasAccess, isOnTrial, renewOpensAt } from "@/lib/access";
 import { brl, formatDay, formatWhen } from "@/lib/utils";
 import { closePendingSubscriptions, lastPaidSubscription, subscriptionAmountCents, syncPendingSubscription } from "@/lib/subscription";
 
@@ -17,13 +17,13 @@ export default async function PlanoPage({ params }: { params: Promise<{ slug: st
   const until = user.barberProfile.accessUntil;
   const open = hasAccess(until);
   const left = daysLeft(until);
-  const canPay = canRenewPlan(until);
+  const trial = isOnTrial(user.barberProfile.trialUntil);
+  const trialLeft = daysLeft(user.barberProfile.trialUntil);
+  const canPay = canPayPlan(until, user.barberProfile.trialUntil);
   const renewFrom = renewOpensAt(until);
   if (plan && !canPay) await closePendingSubscriptions(user.barberProfile.id);
   if (plan && canPay) await syncPendingSubscription(user.barberProfile.id, priceCents);
   const last = await lastPaidSubscription(user.barberProfile.id);
-  const trial = isOnTrial(user.barberProfile.trialUntil);
-  const trialLeft = daysLeft(user.barberProfile.trialUntil);
 
   return (
     <div className="space-y-4">
@@ -54,9 +54,14 @@ export default async function PlanoPage({ params }: { params: Promise<{ slug: st
             {last.method === "PIX" ? " · PIX" : " · Mercado Pago"}.
           </p>
         )}
-        {open && !canPay && renewFrom && (
+        {open && !canPay && !trial && renewFrom && (
           <p className="mt-3 text-sm text-[#8b93a7]">
             Nova cobrança só a partir de {formatDay(renewFrom)} (10 dias antes do término).
+          </p>
+        )}
+        {trial && (
+          <p className="mt-3 text-sm text-[#8b93a7]">
+            Você pode pagar o plano agora, antes do fim do teste.
           </p>
         )}
       </Card>
@@ -67,6 +72,7 @@ export default async function PlanoPage({ params }: { params: Promise<{ slug: st
           interval={plan.interval}
           durationDays={plan.durationDays}
           canPay={canPay}
+          onTrial={trial}
           renewFrom={renewFrom?.toISOString() ?? null}
           lastPayment={
             last

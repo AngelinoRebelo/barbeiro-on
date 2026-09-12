@@ -18,6 +18,7 @@ export function PlanPay({
   interval,
   durationDays,
   canPay,
+  onTrial,
   renewFrom,
   lastPayment,
 }: {
@@ -26,6 +27,7 @@ export function PlanPay({
   interval: string;
   durationDays?: number;
   canPay: boolean;
+  onTrial?: boolean;
   renewFrom?: string | null;
   lastPayment?: LastPlanPayment | null;
 }) {
@@ -84,7 +86,9 @@ export function PlanPay({
       )}
       {canPay ? (
         <p className="mt-4 text-sm text-[#8b93a7]">
-          PIX e cartão usam o Mercado Pago da plataforma. A confirmação entra sozinha no sistema.
+          {onTrial
+            ? "Pague agora se quiser começar o plano pago antes do fim do teste. PIX e cartão usam o Mercado Pago da plataforma."
+            : "PIX e cartão usam o Mercado Pago da plataforma. A confirmação entra sozinha no sistema."}
         </p>
       ) : (
         <p className="mt-4 text-sm text-[#8b93a7]">

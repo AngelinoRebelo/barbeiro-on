@@ -54,6 +54,16 @@ export default function UsuariosPage() {
   const [billingDraft, setBillingDraft] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState("");
   const [msg, setMsg] = useState("");
+  const [openUsers, setOpenUsers] = useState<Record<string, boolean>>({});
+  const [openClients, setOpenClients] = useState<Record<string, boolean>>({});
+
+  function toggleUser(id: string) {
+    setOpenUsers((s) => ({ ...s, [id]: !s[id] }));
+  }
+
+  function toggleClient(id: string) {
+    setOpenClients((s) => ({ ...s, [id]: !s[id] }));
+  }
 
   async function load() {
     const [usersRes, plansRes] = await Promise.all([
@@ -151,13 +161,17 @@ export default function UsuariosPage() {
           const left = daysLeft(u.accessUntil);
           const planValue = selectedPlan[u.id] || u.planId || plans[0]?.id || "";
           const chargeCents = u.billingCents ?? u.planPriceCents ?? 0;
+          const open = Boolean(openUsers[u.id]);
           return (
             <Card key={u.id} className="space-y-3">
-              <div className="flex flex-wrap items-start justify-between gap-3">
+              <button
+                type="button"
+                className="flex w-full flex-wrap items-start justify-between gap-3 text-left"
+                aria-expanded={open}
+                onClick={() => toggleUser(u.id)}
+              >
                 <div>
-                  <Link href={`/admin/usuarios/${u.id}`} className="text-lg font-medium hover:text-gold">
-                    {u.name}
-                  </Link>
+                  <p className="text-lg font-medium">{u.name}</p>
                   <p className="text-sm text-[#8b93a7]">{u.email}{u.shopName ? ` · ${u.shopName}` : ""}{u.slug ? ` · /${u.slug}` : ""}</p>
                   {u.role === "BARBER" && (
                     <p className="mt-1 text-sm text-[#8b93a7]">
@@ -166,17 +180,11 @@ export default function UsuariosPage() {
                       {u.accessUntil
                         ? ` · vigente até ${formatDay(new Date(u.accessUntil))} (${left} dia${left === 1 ? "" : "s"})`
                         : " · sem vigência"}
-                    </p>
-                  )}
-                  {u.onTrial && (
-                    <p className="mt-2 rounded-2xl border border-gold/35 bg-[rgba(212,175,55,0.12)] px-3 py-2 text-sm text-gold">
-                      Conta gratuita em período de teste
-                      {u.trialDaysLeft === 1 ? " · resta 1 dia" : ` · restam ${u.trialDaysLeft} dias`}
-                      {` · padrão da plataforma: ${trialDays} dia${trialDays === "1" ? "" : "s"}`}.
+                      {u.clients.length ? ` · ${u.clients.length} cliente${u.clients.length === 1 ? "" : "s"}` : ""}
                     </p>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Badge>{u.role === "ADMIN" ? "Admin" : u.role === "BARBER" ? "Barbeiro" : "Cliente"}</Badge>
                   <Badge tone={u.status === "ACTIVE" ? "cyan" : u.status === "SUSPENDED" ? "danger" : "muted"}>
                     {u.status === "ACTIVE" ? "Ativo" : u.status === "SUSPENDED" ? "Suspenso" : "Aguardando e-mail"}
@@ -184,197 +192,234 @@ export default function UsuariosPage() {
                   {u.onTrial && <Badge tone="gold">teste grátis</Badge>}
                   {u.approved === false && <Badge tone="danger">aguardando</Badge>}
                   {u.approved === true && <Badge tone="cyan">aprovado</Badge>}
-                  {u.slug && (
-                    <Link className="text-sm text-gold" href={`/${u.slug}`}>
-                      /{u.slug}
+                  <span className={`inline-block text-gold transition ${open ? "rotate-90" : ""}`} aria-hidden>
+                    ▸
+                  </span>
+                </div>
+              </button>
+              {open && (
+                <div className="space-y-3 border-t border-white/5 pt-3">
+                  {u.onTrial && (
+                    <p className="rounded-2xl border border-gold/35 bg-[rgba(212,175,55,0.12)] px-3 py-2 text-sm text-gold">
+                      Conta gratuita em período de teste
+                      {u.trialDaysLeft === 1 ? " · resta 1 dia" : ` · restam ${u.trialDaysLeft} dias`}
+                      {` · padrão da plataforma: ${trialDays} dia${trialDays === "1" ? "" : "s"}`}.
+                    </p>
+                  )}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link href={`/admin/usuarios/${u.id}`} className="text-sm text-gold">
+                      Abrir ficha
                     </Link>
-                  )}
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {u.status !== "ACTIVE" && (
-                  <Button variant="cyan" disabled={busy === u.id} onClick={() => patch(u.id, { action: "verify", status: "ACTIVE" })}>
-                    Ativar
-                  </Button>
-                )}
-                {u.status !== "SUSPENDED" && (
-                  <Button variant="danger" disabled={busy === u.id} onClick={() => patch(u.id, { status: "SUSPENDED" })}>
-                    Suspender
-                  </Button>
-                )}
-                {u.role === "BARBER" && (
-                  <Button variant="ghost" disabled={busy === u.id} onClick={() => patch(u.id, { approved: !u.approved })}>
-                    {u.approved ? "Revogar unidade" : "Aprovar unidade"}
-                  </Button>
-                )}
-                <Button variant="ghost" disabled={busy === u.id} onClick={() => patch(u.id, { action: "resend" })}>
-                  Reenviar e-mail
-                </Button>
-                {u.id !== me && u.role !== "ADMIN" && (
-                  <Button variant="danger" disabled={busy === u.id} onClick={() => remove(u.id)}>
-                    Excluir
-                  </Button>
-                )}
-              </div>
-              {u.role === "BARBER" && (
-                <div className="flex flex-wrap items-end gap-2 rounded-2xl border border-white/5 p-3">
-                  <label className="grid gap-1 text-xs uppercase tracking-[0.18em] text-[#8b93a7]">
-                    Dias de teste
-                    <input
-                      className={inputClass() + " w-24"}
-                      type="number"
-                      min={0}
-                      max={3650}
-                      value={trialDraft[u.id] ?? String(u.onTrial ? u.trialDaysLeft : Number(trialDays) || 15)}
-                      onChange={(e) => setTrialDraft((s) => ({ ...s, [u.id]: e.target.value }))}
-                    />
-                  </label>
-                  <Button
-                    variant="ghost"
-                    disabled={busy === u.id}
-                    onClick={() =>
-                      patch(u.id, {
-                        action: "setTrialDays",
-                        days: Number(trialDraft[u.id] ?? (u.onTrial ? u.trialDaysLeft : Number(trialDays) || 15)),
-                      })
-                    }
-                  >
-                    Salvar teste
-                  </Button>
-                  <label className="grid gap-1 text-xs uppercase tracking-[0.18em] text-[#8b93a7]">
-                    Atribuir plano
-                    <select
-                      className={inputClass() + " min-w-44"}
-                      value={planValue}
-                      onChange={(e) => setSelectedPlan((s) => ({ ...s, [u.id]: e.target.value }))}
-                    >
-                      {plans.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name} · {p.durationDays} dias
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <Button
-                    variant="ghost"
-                    disabled={busy === u.id || !planValue}
-                    onClick={() => patch(u.id, { action: "assignPlan", planId: planValue })}
-                  >
-                    Aplicar plano
-                  </Button>
-                  <label className="grid gap-1 text-xs uppercase tracking-[0.18em] text-[#8b93a7]">
-                    Acrescentar dias
-                    <input
-                      className={inputClass() + " w-24"}
-                      type="number"
-                      min={1}
-                      max={3650}
-                      value={extraDays[u.id] ?? "30"}
-                      onChange={(e) => setExtraDays((s) => ({ ...s, [u.id]: e.target.value }))}
-                    />
-                  </label>
-                  <Button
-                    variant="cyan"
-                    disabled={busy === u.id}
-                    onClick={() => patch(u.id, { action: "addDays", days: Number(extraDays[u.id] || 30) })}
-                  >
-                    Acrescentar
-                  </Button>
-                  <label className="grid gap-1 text-xs uppercase tracking-[0.18em] text-[#8b93a7]">
-                    Valor da cobrança
-                    <input
-                      className={inputClass() + " w-32"}
-                      inputMode="decimal"
-                      placeholder="ex: 1,00"
-                      value={billingDraft[u.id] ?? ""}
-                      onChange={(e) => setBillingDraft((s) => ({ ...s, [u.id]: e.target.value }))}
-                    />
-                  </label>
-                  <Button
-                    variant="ghost"
-                    disabled={busy === u.id || !(billingDraft[u.id] || "").trim()}
-                    onClick={async () => {
-                      const raw = (billingDraft[u.id] || "").trim();
-                      const parsed = Number(raw.replace(/\./g, "").replace(",", "."));
-                      if (!raw || !Number.isFinite(parsed) || parsed < 0) {
-                        alert("Informe o valor em reais, por exemplo 1,00.");
-                        return;
-                      }
-                      const ok = await patch(u.id, { action: "setBilling", billingCents: toCents(raw) });
-                      if (ok) setBillingDraft((s) => ({ ...s, [u.id]: "" }));
-                    }}
-                  >
-                    Salvar valor
-                  </Button>
-                  {u.billingCents != null && (
-                    <Button
-                      variant="ghost"
-                      disabled={busy === u.id}
-                      onClick={() => patch(u.id, { action: "setBilling", billingCents: null })}
-                    >
-                      Usar preço do plano
-                    </Button>
-                  )}
-                </div>
-              )}
-              {u.role === "BARBER" && (
-                <div className="rounded-2xl border border-white/5 p-3">
-                  <p className="mb-3 text-xs uppercase tracking-[0.18em] text-[#8b93a7]">
-                    Clientes da unidade · {u.clients.length}
-                  </p>
-                  {u.clients.length === 0 && (
-                    <p className="text-sm text-[#8b93a7]">Nenhum cliente com conta nesta barbearia.</p>
-                  )}
-                  <div className="grid gap-2">
-                    {u.clients.map((c) => (
-                      <div key={c.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/5 px-3 py-2">
-                        <div>
-                          <Link href={`/admin/usuarios/${c.id}`} className="font-medium hover:text-gold">
-                            {c.name}
-                          </Link>
-                          <p className="text-sm text-[#8b93a7]">
-                            {c.email}
-                            {c.phone ? ` · ${c.phone}` : ""}
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge>Cliente</Badge>
-                          <Badge tone={c.status === "ACTIVE" ? "cyan" : c.status === "SUSPENDED" ? "danger" : "muted"}>
-                            {c.status === "ACTIVE" ? "Ativo" : c.status === "SUSPENDED" ? "Suspenso" : "Aguardando e-mail"}
-                          </Badge>
-                          {c.status !== "ACTIVE" && (
-                            <Button variant="cyan" disabled={busy === c.id} onClick={() => patch(c.id, { action: "verify", status: "ACTIVE" })}>
-                              Ativar
-                            </Button>
-                          )}
-                          {c.status !== "SUSPENDED" && (
-                            <Button variant="danger" disabled={busy === c.id} onClick={() => patch(c.id, { status: "SUSPENDED" })}>
-                              Suspender
-                            </Button>
-                          )}
-                          <Button variant="ghost" disabled={busy === c.id} onClick={() => patch(c.id, { action: "resend" })}>
-                            Reenviar e-mail
-                          </Button>
-                          <Button variant="danger" disabled={busy === c.id} onClick={() => remove(c.id)}>
-                            Excluir
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                    {u.slug && (
+                      <Link className="text-sm text-gold" href={`/${u.slug}`}>
+                        /{u.slug}
+                      </Link>
+                    )}
                   </div>
-                </div>
-              )}
-              {u.features && (
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {(Object.keys(FEATURE_LABELS) as (keyof FeatureFlags)[]).map((key) => (
-                    <button
-                      key={key}
-                      onClick={() => patch(u.id, { features: { [key]: !u.features?.[key] } })}
-                      className={`rounded-full border px-3 py-1 text-xs ${u.features?.[key] ? "border-cyan/40 text-cyan" : "border-white/10 text-[#8b93a7]"}`}
-                    >
-                      {FEATURE_LABELS[key]}
-                    </button>
-                  ))}
+                  <div className="flex flex-wrap gap-2">
+                    {u.status !== "ACTIVE" && (
+                      <Button variant="cyan" disabled={busy === u.id} onClick={() => patch(u.id, { action: "verify", status: "ACTIVE" })}>
+                        Ativar
+                      </Button>
+                    )}
+                    {u.status !== "SUSPENDED" && (
+                      <Button variant="danger" disabled={busy === u.id} onClick={() => patch(u.id, { status: "SUSPENDED" })}>
+                        Suspender
+                      </Button>
+                    )}
+                    {u.role === "BARBER" && (
+                      <Button variant="ghost" disabled={busy === u.id} onClick={() => patch(u.id, { approved: !u.approved })}>
+                        {u.approved ? "Revogar unidade" : "Aprovar unidade"}
+                      </Button>
+                    )}
+                    <Button variant="ghost" disabled={busy === u.id} onClick={() => patch(u.id, { action: "resend" })}>
+                      Reenviar e-mail
+                    </Button>
+                    {u.id !== me && u.role !== "ADMIN" && (
+                      <Button variant="danger" disabled={busy === u.id} onClick={() => remove(u.id)}>
+                        Excluir
+                      </Button>
+                    )}
+                  </div>
+                  {u.role === "BARBER" && (
+                    <div className="flex flex-wrap items-end gap-2 rounded-2xl border border-white/5 p-3">
+                      <label className="grid gap-1 text-xs uppercase tracking-[0.18em] text-[#8b93a7]">
+                        Dias de teste
+                        <input
+                          className={inputClass() + " w-24"}
+                          type="number"
+                          min={0}
+                          max={3650}
+                          value={trialDraft[u.id] ?? String(u.onTrial ? u.trialDaysLeft : Number(trialDays) || 15)}
+                          onChange={(e) => setTrialDraft((s) => ({ ...s, [u.id]: e.target.value }))}
+                        />
+                      </label>
+                      <Button
+                        variant="ghost"
+                        disabled={busy === u.id}
+                        onClick={() =>
+                          patch(u.id, {
+                            action: "setTrialDays",
+                            days: Number(trialDraft[u.id] ?? (u.onTrial ? u.trialDaysLeft : Number(trialDays) || 15)),
+                          })
+                        }
+                      >
+                        Salvar teste
+                      </Button>
+                      <label className="grid gap-1 text-xs uppercase tracking-[0.18em] text-[#8b93a7]">
+                        Atribuir plano
+                        <select
+                          className={inputClass() + " min-w-44"}
+                          value={planValue}
+                          onChange={(e) => setSelectedPlan((s) => ({ ...s, [u.id]: e.target.value }))}
+                        >
+                          {plans.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} · {p.durationDays} dias
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <Button
+                        variant="ghost"
+                        disabled={busy === u.id || !planValue}
+                        onClick={() => patch(u.id, { action: "assignPlan", planId: planValue })}
+                      >
+                        Aplicar plano
+                      </Button>
+                      <label className="grid gap-1 text-xs uppercase tracking-[0.18em] text-[#8b93a7]">
+                        Acrescentar dias
+                        <input
+                          className={inputClass() + " w-24"}
+                          type="number"
+                          min={1}
+                          max={3650}
+                          value={extraDays[u.id] ?? "30"}
+                          onChange={(e) => setExtraDays((s) => ({ ...s, [u.id]: e.target.value }))}
+                        />
+                      </label>
+                      <Button
+                        variant="cyan"
+                        disabled={busy === u.id}
+                        onClick={() => patch(u.id, { action: "addDays", days: Number(extraDays[u.id] || 30) })}
+                      >
+                        Acrescentar
+                      </Button>
+                      <label className="grid gap-1 text-xs uppercase tracking-[0.18em] text-[#8b93a7]">
+                        Valor da cobrança
+                        <input
+                          className={inputClass() + " w-32"}
+                          inputMode="decimal"
+                          placeholder="ex: 1,00"
+                          value={billingDraft[u.id] ?? ""}
+                          onChange={(e) => setBillingDraft((s) => ({ ...s, [u.id]: e.target.value }))}
+                        />
+                      </label>
+                      <Button
+                        variant="ghost"
+                        disabled={busy === u.id || !(billingDraft[u.id] || "").trim()}
+                        onClick={async () => {
+                          const raw = (billingDraft[u.id] || "").trim();
+                          const parsed = Number(raw.replace(/\./g, "").replace(",", "."));
+                          if (!raw || !Number.isFinite(parsed) || parsed < 0) {
+                            alert("Informe o valor em reais, por exemplo 1,00.");
+                            return;
+                          }
+                          const ok = await patch(u.id, { action: "setBilling", billingCents: toCents(raw) });
+                          if (ok) setBillingDraft((s) => ({ ...s, [u.id]: "" }));
+                        }}
+                      >
+                        Salvar valor
+                      </Button>
+                      {u.billingCents != null && (
+                        <Button
+                          variant="ghost"
+                          disabled={busy === u.id}
+                          onClick={() => patch(u.id, { action: "setBilling", billingCents: null })}
+                        >
+                          Usar preço do plano
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                  {u.role === "BARBER" && (
+                    <div className="rounded-2xl border border-white/5 p-3">
+                      <p className="mb-3 text-xs uppercase tracking-[0.18em] text-[#8b93a7]">
+                        Clientes da unidade · {u.clients.length}
+                      </p>
+                      {u.clients.length === 0 && (
+                        <p className="text-sm text-[#8b93a7]">Nenhum cliente com conta nesta barbearia.</p>
+                      )}
+                      <div className="grid gap-2">
+                        {u.clients.map((c) => {
+                          const clientOpen = Boolean(openClients[c.id]);
+                          return (
+                            <div key={c.id} className="rounded-xl border border-white/5 px-3 py-2">
+                              <button
+                                type="button"
+                                className="flex w-full flex-wrap items-center justify-between gap-3 text-left"
+                                aria-expanded={clientOpen}
+                                onClick={() => toggleClient(c.id)}
+                              >
+                                <span className="font-medium">{c.name}</span>
+                                <span className="flex flex-wrap items-center gap-2">
+                                  <Badge>Cliente</Badge>
+                                  <Badge tone={c.status === "ACTIVE" ? "cyan" : c.status === "SUSPENDED" ? "danger" : "muted"}>
+                                    {c.status === "ACTIVE" ? "Ativo" : c.status === "SUSPENDED" ? "Suspenso" : "Aguardando e-mail"}
+                                  </Badge>
+                                  <span className={`inline-block text-gold transition ${clientOpen ? "rotate-90" : ""}`} aria-hidden>
+                                    ▸
+                                  </span>
+                                </span>
+                              </button>
+                              {clientOpen && (
+                                <div className="mt-3 space-y-3 border-t border-white/5 pt-3">
+                                  <p className="text-sm text-[#8b93a7]">
+                                    {c.email}
+                                    {c.phone ? ` · ${c.phone}` : ""}
+                                  </p>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <Link href={`/admin/usuarios/${c.id}`} className="text-sm text-gold">
+                                      Abrir ficha
+                                    </Link>
+                                    {c.status !== "ACTIVE" && (
+                                      <Button variant="cyan" disabled={busy === c.id} onClick={() => patch(c.id, { action: "verify", status: "ACTIVE" })}>
+                                        Ativar
+                                      </Button>
+                                    )}
+                                    {c.status !== "SUSPENDED" && (
+                                      <Button variant="danger" disabled={busy === c.id} onClick={() => patch(c.id, { status: "SUSPENDED" })}>
+                                        Suspender
+                                      </Button>
+                                    )}
+                                    <Button variant="ghost" disabled={busy === c.id} onClick={() => patch(c.id, { action: "resend" })}>
+                                      Reenviar e-mail
+                                    </Button>
+                                    <Button variant="danger" disabled={busy === c.id} onClick={() => remove(c.id)}>
+                                      Excluir
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {u.features && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {(Object.keys(FEATURE_LABELS) as (keyof FeatureFlags)[]).map((key) => (
+                        <button
+                          key={key}
+                          onClick={() => patch(u.id, { features: { [key]: !u.features?.[key] } })}
+                          className={`rounded-full border px-3 py-1 text-xs ${u.features?.[key] ? "border-cyan/40 text-cyan" : "border-white/10 text-[#8b93a7]"}`}
+                        >
+                          {FEATURE_LABELS[key]}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </Card>

@@ -6,7 +6,7 @@ import { shopPath, isReservedSlug } from "@/lib/paths";
 import { credentialsForPayment } from "@/lib/payments";
 import { MpCheckout } from "@/components/mp-checkout-lazy";
 import { ShopBackdrop, ShopLogo } from "@/components/shop-brand";
-import { canRenewPlan, renewOpensAt } from "@/lib/access";
+import { canPayPlan, renewOpensAt } from "@/lib/access";
 import { closePendingSubscriptions, lastPaidSubscription } from "@/lib/subscription";
 
 export default async function ShopPagarPage({
@@ -28,7 +28,7 @@ export default async function ShopPagarPage({
   const creds = await credentialsForPayment(payment);
   const label = payment.kind === "SUBSCRIPTION" ? "Mensalidade da plataforma" : payment.appointment?.service.name;
   const lockedPlan =
-    payment.kind === "SUBSCRIPTION" && payment.status !== "PAID" && !canRenewPlan(payment.barber.accessUntil);
+    payment.kind === "SUBSCRIPTION" && payment.status !== "PAID" && !canPayPlan(payment.barber.accessUntil, payment.barber.trialUntil);
   if (lockedPlan) await closePendingSubscriptions(payment.barberId);
   const last = payment.kind === "SUBSCRIPTION" ? await lastPaidSubscription(payment.barberId) : null;
   const renewFrom = renewOpensAt(payment.barber.accessUntil);

@@ -7,7 +7,7 @@ import { randomToken } from "@/lib/utils";
 import { getPlatformSettings } from "@/lib/platform";
 import { shopPath } from "@/lib/paths";
 import { grantPaidPeriod, lastPaidSubscription, closePendingSubscriptions, subscriptionAmountCents, syncPendingSubscription } from "@/lib/subscription";
-import { canRenewPlan } from "@/lib/access";
+import { canPayPlan } from "@/lib/access";
 import { credentialsForPayment, mpAccessOf } from "@/lib/payments";
 
 function checkoutPayload(opts: {
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     });
     if (!profile?.plan) return jsonError("Nenhum plano selecionado.");
     const amountCents = subscriptionAmountCents(profile);
-    if (!canRenewPlan(profile.accessUntil)) {
+    if (!canPayPlan(profile.accessUntil, profile.trialUntil)) {
       await closePendingSubscriptions(profile.id);
       const last = await lastPaidSubscription(profile.id);
       return jsonError(

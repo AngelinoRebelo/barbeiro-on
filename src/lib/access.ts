@@ -28,6 +28,15 @@ export function canRenewPlan(until: Date | null | undefined, now = new Date()) {
   return daysLeft(until, now) <= RENEW_WINDOW_DAYS;
 }
 
+export function canPayPlan(
+  accessUntil: Date | null | undefined,
+  trialUntil?: Date | null,
+  now = new Date(),
+) {
+  if (isOnTrial(trialUntil, now)) return true;
+  return canRenewPlan(accessUntil, now);
+}
+
 export function defaultDuration(interval: string) {
   return interval === "YEARLY" ? 365 : 30;
 }
