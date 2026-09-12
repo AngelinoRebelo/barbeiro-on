@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { Card, Badge } from "@/components/ui";
 import { parseFeatures, FEATURE_LABELS } from "@/lib/features";
-import { formatWhen, formatDay } from "@/lib/utils";
+import { formatWhen, formatDay, statusLabel } from "@/lib/utils";
 
 export default async function UserDetail({ params }: { params: Promise<{ id: string }> }) {
   await requireAdmin();
@@ -20,8 +20,8 @@ export default async function UserDetail({ params }: { params: Promise<{ id: str
       <h2 className="text-2xl">{user.name}</h2>
       <p className="text-[#8b93a7]">{user.email}</p>
       <div className="mt-4 flex gap-2">
-        <Badge>{user.role}</Badge>
-        <Badge tone={user.status === "ACTIVE" ? "cyan" : "muted"}>{user.status}</Badge>
+        <Badge>{statusLabel(user.role)}</Badge>
+        <Badge tone={user.status === "ACTIVE" ? "cyan" : "muted"}>{statusLabel(user.status)}</Badge>
       </div>
       <dl className="mt-6 grid gap-3 text-sm md:grid-cols-2">
         <div><dt className="text-[#8b93a7]">Criado</dt><dd>{formatWhen(user.createdAt)}</dd></div>

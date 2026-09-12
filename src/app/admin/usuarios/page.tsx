@@ -117,8 +117,10 @@ export default function UsuariosPage() {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <Badge>{u.role}</Badge>
-                  <Badge tone={u.status === "ACTIVE" ? "cyan" : u.status === "SUSPENDED" ? "danger" : "muted"}>{u.status}</Badge>
+                  <Badge>{u.role === "ADMIN" ? "Admin" : u.role === "BARBER" ? "Barbeiro" : "Cliente"}</Badge>
+                  <Badge tone={u.status === "ACTIVE" ? "cyan" : u.status === "SUSPENDED" ? "danger" : "muted"}>
+                    {u.status === "ACTIVE" ? "Ativo" : u.status === "SUSPENDED" ? "Suspenso" : "Aguardando e-mail"}
+                  </Badge>
                   {u.approved === false && <Badge tone="danger">aguardando</Badge>}
                   {u.approved === true && <Badge tone="cyan">aprovado</Badge>}
                   {u.slug && (

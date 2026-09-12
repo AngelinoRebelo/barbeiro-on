@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { Card, Badge } from "@/components/ui";
-import { brl } from "@/lib/utils";
+import { brl, statusLabel } from "@/lib/utils";
 import Link from "next/link";
 
 export default async function AdminHome() {
@@ -49,7 +49,7 @@ export default async function AdminHome() {
                 <p className="text-sm text-[#8b93a7]">{u.email}{u.barberProfile ? ` · ${u.barberProfile.shopName}` : ""}</p>
               </div>
               <Badge tone={u.status === "ACTIVE" ? "cyan" : u.status === "SUSPENDED" ? "danger" : "muted"}>
-                {u.role} · {u.status}
+                {statusLabel(u.role)} · {statusLabel(u.status)}
               </Badge>
             </Link>
           ))}

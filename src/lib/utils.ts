@@ -140,3 +140,7 @@ export const STATUS_LABEL: Record<string, string> = {
   BARBER: "Barbeiro",
   CLIENT: "Cliente",
 };
+
+export function statusLabel(value: string) {
+  return STATUS_LABEL[value] || value;
+}

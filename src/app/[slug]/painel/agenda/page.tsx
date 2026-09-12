@@ -33,6 +33,7 @@ export default function AgendaPage() {
   const [newTime, setNewTime] = useState("10:00");
   const [form, setForm] = useState({ clientId: "", serviceId: "", time: "10:00", notes: "" });
   const [msg, setMsg] = useState("");
+  const [focusQueue, setFocusQueue] = useState(false);
   const [checkout, setCheckout] = useState<{
     appointmentId: string;
     paymentId: string;
@@ -69,6 +70,16 @@ export default function AgendaPage() {
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date]);
+
+  useEffect(() => {
+    setFocusQueue(sessionStorage.getItem("agenda-fila") === "1");
+  }, []);
+
+  function toggleFocus() {
+    const next = !focusQueue;
+    setFocusQueue(next);
+    sessionStorage.setItem("agenda-fila", next ? "1" : "0");
+  }
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -146,20 +157,47 @@ export default function AgendaPage() {
     }
   }
 
+  const working = items.filter((a) => a.status === "SCHEDULED" || a.status === "CONFIRMED");
+  const finished = items.filter((a) => a.status === "DONE" || a.status === "NO_SHOW");
+  const cancelled = items.filter((a) => a.status === "CANCELLED");
+  const list = focusQueue ? working : items;
+
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+    <div className={focusQueue ? "grid gap-4" : "grid gap-4 lg:grid-cols-[1fr_320px]"}>
       <Card>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2>Fila do dia</h2>
-            <p className="text-sm text-[#8b93a7]">Quem conclui vai para o final. Novos horários entram na ordem certa.</p>
+            <h2>{focusQueue ? "Atendimento do dia" : "Fila do dia"}</h2>
+            <p className="text-sm text-[#8b93a7]">
+              {focusQueue
+                ? "Só quem ainda está na fila. Conclua, cobre e o próximo sobe na hora."
+                : "Quem conclui vai para o final. Novos horários entram na ordem certa."}
+            </p>
           </div>
-          <input className={inputClass() + " max-w-44"} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <div className="flex flex-wrap items-center gap-2">
+            <input className={inputClass() + " max-w-44"} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <Button type="button" variant={focusQueue ? "ghost" : "gold"} onClick={toggleFocus}>
+              {focusQueue ? "Ver agenda completa" : "Só a fila do dia"}
+            </Button>
+          </div>
         </div>
         <div className="grid gap-2">
-          {items.length === 0 && <p className="text-[#8b93a7]">Ninguém na fila neste dia.</p>}
-          {items.map((a) => (
-            <div key={a.id} className={`rounded-2xl border p-4 ${a.status === "DONE" || a.status === "CANCELLED" ? "border-white/5 opacity-70" : "border-white/5"}`}>
+          {list.length === 0 && (
+            <p className="text-[#8b93a7]">
+              {focusQueue ? "Fila livre. Ninguém aguardando neste dia." : "Ninguém na fila neste dia."}
+            </p>
+          )}
+          {list.map((a) => (
+            <div
+              key={a.id}
+              className={`rounded-2xl border p-4 ${
+                a.queue.waiting && a.queue.position === 1
+                  ? "border-gold/50 bg-[rgba(212,175,55,0.06)]"
+                  : a.status === "DONE" || a.status === "CANCELLED"
+                    ? "border-white/5 opacity-70"
+                    : "border-white/5"
+              }`}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex gap-3">
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-gold/30 text-sm text-gold">
@@ -170,6 +208,9 @@ export default function AgendaPage() {
                     <p className="text-sm text-[#8b93a7]">
                       {hm(new Date(a.startsAt))} · {a.service.name} · {brl(a.service.priceCents)}
                     </p>
+                    {a.queue.waiting && a.queue.position === 1 && (
+                      <p className="mt-1 text-sm text-gold">Em atendimento</p>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-wrap justify-end gap-2">
@@ -182,7 +223,7 @@ export default function AgendaPage() {
               <div className="mt-3 flex flex-wrap gap-2">
                 {a.status !== "DONE" && a.status !== "CANCELLED" && (
                   <Button
-                    variant="ghost"
+                    variant={focusQueue ? "gold" : "ghost"}
                     onClick={() =>
                       fetch(`/api/barber/appointments/${a.id}`, {
                         method: "PATCH",
@@ -222,9 +263,48 @@ export default function AgendaPage() {
               )}
             </div>
           ))}
+          {focusQueue && finished.length > 0 && (
+            <details className="fold mt-2 rounded-2xl border border-white/5">
+              <summary className="flex cursor-pointer items-center justify-between px-4 py-3">
+                <span className="font-semibold">Concluídos hoje</span>
+                <span className="flex items-center gap-2">
+                  <Badge tone="muted">{finished.length}</Badge>
+                  <span className="chev text-[#8b93a7]">▾</span>
+                </span>
+              </summary>
+              <div className="grid gap-2 border-t border-white/5 px-3 py-3">
+                {finished.map((a) => (
+                  <div key={a.id} className="flex items-center justify-between rounded-2xl border border-white/5 px-4 py-3">
+                    <p>{a.client.name} · {a.service.name} · {hm(new Date(a.startsAt))}</p>
+                    <Badge tone="cyan">Concluído</Badge>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
+          {focusQueue && cancelled.length > 0 && (
+            <details className="fold rounded-2xl border border-white/5">
+              <summary className="flex cursor-pointer items-center justify-between px-4 py-3">
+                <span className="font-semibold">Cancelados</span>
+                <span className="flex items-center gap-2">
+                  <Badge tone="muted">{cancelled.length}</Badge>
+                  <span className="chev text-[#8b93a7]">▾</span>
+                </span>
+              </summary>
+              <div className="grid gap-2 border-t border-white/5 px-3 py-3">
+                {cancelled.map((a) => (
+                  <div key={a.id} className="flex items-center justify-between rounded-2xl border border-white/5 px-4 py-3">
+                    <p>{a.client.name} · {a.service.name} · {hm(new Date(a.startsAt))}</p>
+                    <Badge tone="muted">Cancelado</Badge>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
         </div>
         {msg && <p className="mt-3 text-sm text-cyan">{msg}</p>}
       </Card>
+      {!focusQueue && (
       <div className="space-y-4">
         <Card>
           <h2 className="mb-2">Horários livres</h2>
@@ -292,6 +372,7 @@ export default function AgendaPage() {
           </form>
         </Card>
       </div>
+      )}
     </div>
   );
 }
