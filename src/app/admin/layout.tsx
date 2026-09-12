@@ -10,6 +10,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/usuarios", label: "Usuários" },
     { href: "/admin/planos", label: "Planos" },
     { href: "/admin/pagamentos", label: "PIX e Mercado Pago" },
+    { href: "/admin/suporte", label: "Suporte" },
   ];
 
   return (

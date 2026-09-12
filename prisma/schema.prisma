@@ -92,6 +92,7 @@ model User {
   appointments  Appointment[]  @relation("ClientAppointments")
   payments      Payment[]      @relation("ClientPayments")
   auditLogs     AuditLog[]
+  supportTickets SupportTicket[]
 
   @@index([shopId])
 }
@@ -269,4 +270,19 @@ model AuditLog {
   target    String   @default("")
   meta      Json?
   createdAt DateTime @default(now())
+}
+
+model SupportTicket {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name      String   @default("")
+  email     String   @default("")
+  role      String   @default("")
+  shopSlug  String   @default("")
+  body      String
+  status    String   @default("OPEN")
+  createdAt DateTime @default(now())
+
+  @@index([status, createdAt])
 }
