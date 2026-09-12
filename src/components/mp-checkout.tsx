@@ -45,7 +45,7 @@ export const MpCheckout = memo(function MpCheckout({
       onPaidRef.current?.();
     }
     void checkPaid();
-    const timer = setInterval(checkPaid, 4000);
+    const timer = setInterval(checkPaid, 1500);
     return () => {
       cancelled = true;
       clearInterval(timer);

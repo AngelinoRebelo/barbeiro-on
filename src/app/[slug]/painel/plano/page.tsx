@@ -7,6 +7,8 @@ import { canPayPlan, daysLeft, hasAccess, isOnTrial, renewOpensAt } from "@/lib/
 import { brl, formatDay, formatWhen } from "@/lib/utils";
 import { closePendingSubscriptions, lastPaidSubscription, subscriptionAmountCents, syncPendingSubscription } from "@/lib/subscription";
 
+export const dynamic = "force-dynamic";
+
 export default async function PlanoPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const { user } = await requireUser();
@@ -17,13 +19,13 @@ export default async function PlanoPage({ params }: { params: Promise<{ slug: st
   const until = user.barberProfile.accessUntil;
   const open = hasAccess(until);
   const left = daysLeft(until);
-  const trial = isOnTrial(user.barberProfile.trialUntil);
+  const last = await lastPaidSubscription(user.barberProfile.id);
+  const trial = isOnTrial(user.barberProfile.trialUntil) && !last;
   const trialLeft = daysLeft(user.barberProfile.trialUntil);
-  const canPay = canPayPlan(until, user.barberProfile.trialUntil);
+  const canPay = canPayPlan(until, trial ? user.barberProfile.trialUntil : null);
   const renewFrom = renewOpensAt(until);
   if (plan && !canPay) await closePendingSubscriptions(user.barberProfile.id);
   if (plan && canPay) await syncPendingSubscription(user.barberProfile.id, priceCents);
-  const last = await lastPaidSubscription(user.barberProfile.id);
 
   return (
     <div className="space-y-4">

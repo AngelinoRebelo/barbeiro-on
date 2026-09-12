@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button, Card } from "@/components/ui";
 import { brl, formatDay, formatWhen } from "@/lib/utils";
 import { MpCheckout } from "@/components/mp-checkout-lazy";
+import { notifyPlanUpdated } from "@/components/trial-notice";
 
 export type LastPlanPayment = {
   amountCents: number;
@@ -31,7 +33,9 @@ export function PlanPay({
   renewFrom?: string | null;
   lastPayment?: LastPlanPayment | null;
 }) {
+  const router = useRouter();
   const [msg, setMsg] = useState("");
+  const [paidNow, setPaidNow] = useState(false);
   const [checkout, setCheckout] = useState<{
     paymentId: string;
     publicKey: string;
@@ -40,8 +44,14 @@ export function PlanPay({
     preferenceId: string;
   } | null>(null);
 
+  function onPaid() {
+    setPaidNow(true);
+    notifyPlanUpdated();
+    router.refresh();
+  }
+
   async function pay() {
-    if (!canPay) return;
+    if (!canPay || paidNow) return;
     setMsg("");
     const res = await fetch("/api/payments/create", {
       method: "POST",
@@ -81,10 +91,15 @@ export function PlanPay({
           {lastPayment.method === "PIX" ? " · PIX" : " · Mercado Pago"}.
         </p>
       )}
-      {!lastPayment && (
+      {paidNow && !lastPayment && (
+        <p className="mt-4 rounded-2xl border border-cyan/25 bg-cyan/5 px-4 py-3 text-sm text-cyan">
+          Pagamento reconhecido. O plano ativo já vale nesta conta.
+        </p>
+      )}
+      {!lastPayment && !paidNow && (
         <p className="mt-4 text-sm text-[#8b93a7]">Nenhum pagamento de plano registrado ainda.</p>
       )}
-      {canPay ? (
+      {canPay && !paidNow ? (
         <p className="mt-4 text-sm text-[#8b93a7]">
           {onTrial
             ? "Pague agora se quiser começar o plano pago antes do fim do teste. PIX e cartão usam o Mercado Pago da plataforma."
@@ -97,12 +112,12 @@ export function PlanPay({
         </p>
       )}
       {msg && <p className="mt-3 text-sm text-[#ff5d73]">{msg}</p>}
-      {canPay && !checkout && (
+      {canPay && !paidNow && !checkout && (
         <div className="mt-6">
           <Button variant="cyan" onClick={pay}>Pagar com Mercado Pago</Button>
         </div>
       )}
-      {canPay && checkout && (
+      {canPay && !paidNow && checkout && (
         <div className="mt-6">
           <MpCheckout
             paymentId={checkout.paymentId}
@@ -110,6 +125,7 @@ export function PlanPay({
             amountCents={checkout.amountCents}
             payerEmail={checkout.payerEmail}
             preferenceId={checkout.preferenceId}
+            onPaid={onPaid}
           />
         </div>
       )}

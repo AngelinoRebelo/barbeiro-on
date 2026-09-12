@@ -6,7 +6,8 @@ import { parseFeatures } from "@/lib/features";
 import { shopPath } from "@/lib/paths";
 import { daysLeft, isOnTrial } from "@/lib/access";
 import { getPlatformSettings } from "@/lib/platform";
-import { TrialNotice } from "@/components/trial-notice";
+import { lastPaidSubscription } from "@/lib/subscription";
+import { TrialNoticeLive } from "@/components/trial-notice";
 
 export const dynamic = "force-dynamic";
 
@@ -28,8 +29,11 @@ export default async function PainelLayout({
   if (user.barberProfile.slug !== slug) redirect(shopPath(user.barberProfile.slug, "/painel"));
   const features = parseFeatures(user.barberProfile.features);
   const base = shopPath(slug, "/painel");
-  const platform = await getPlatformSettings();
-  const trial = isOnTrial(user.barberProfile.trialUntil);
+  const [platform, lastPaid] = await Promise.all([
+    getPlatformSettings(),
+    lastPaidSubscription(user.barberProfile.id),
+  ]);
+  const trial = isOnTrial(user.barberProfile.trialUntil) && !lastPaid;
 
   const nav = [
     { href: base, label: "Painel", show: true },
@@ -54,12 +58,11 @@ export default async function PainelLayout({
       brandAt={user.barberProfile.brandAt}
       shopName={user.barberProfile.shopName}
     >
-      {trial && (
-        <TrialNotice
-          daysLeft={daysLeft(user.barberProfile.trialUntil)}
-          configuredDays={platform.trialDays}
-        />
-      )}
+      <TrialNoticeLive
+        initialOnTrial={trial}
+        initialDaysLeft={daysLeft(user.barberProfile.trialUntil)}
+        initialConfiguredDays={platform.trialDays}
+      />
       {children}
     </AppShell>
   );
