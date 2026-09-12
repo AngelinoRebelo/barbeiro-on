@@ -65,8 +65,17 @@ export function PortalAgenda({ slug }: { slug: string }) {
 
   useEffect(() => {
     load();
+    const live = new EventSource(`/api/shop/${slug}/live`);
+    const refresh = () => {
+      void load();
+    };
+    live.addEventListener("slots", refresh);
+    live.addEventListener("queue", refresh);
     const timer = setInterval(load, 8000);
-    return () => clearInterval(timer);
+    return () => {
+      live.close();
+      clearInterval(timer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 

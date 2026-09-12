@@ -4,6 +4,7 @@ import { apiUser, jsonError } from "@/lib/auth";
 import { parseFeatures } from "@/lib/features";
 import { combineDateTimeSP } from "@/lib/utils";
 import { queueForAppointment } from "@/lib/queue";
+import { notifyShopLive } from "@/lib/live";
 
 type Ctx = { params: Promise<{ slug: string }> };
 
@@ -70,5 +71,6 @@ export async function POST(req: Request, ctx: Ctx) {
   });
 
   const queue = await queueForAppointment(shop.id, appointment);
+  notifyShopLive(slug);
   return NextResponse.json({ appointment, queue });
 }

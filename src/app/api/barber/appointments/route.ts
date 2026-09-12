@@ -6,6 +6,7 @@ import { parseFeatures } from "@/lib/features";
 import { combineDateTimeSP } from "@/lib/utils";
 import { hasAccess } from "@/lib/access";
 import { paidFrom, queueForAppointment } from "@/lib/queue";
+import { notifyShopLive } from "@/lib/live";
 
 async function barber() {
   const ctx = await apiUser();
@@ -87,5 +88,6 @@ export async function POST(req: Request) {
     },
     include: { client: true, service: true },
   });
+  notifyShopLive(ctx.profile.slug);
   return NextResponse.json({ appointment });
 }

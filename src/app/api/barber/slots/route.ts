@@ -4,6 +4,7 @@ import { apiUser, jsonError } from "@/lib/auth";
 import { hasAccess } from "@/lib/access";
 import { combineDateTimeSP } from "@/lib/utils";
 import { buildSlots, busyWindows, offeredTimes } from "@/lib/slots";
+import { notifyShopLive } from "@/lib/live";
 
 async function barber() {
   const ctx = await apiUser();
@@ -49,6 +50,7 @@ export async function POST(req: Request) {
         skipDuplicates: true,
       });
     }
+    notifyShopLive(profile.slug);
     return NextResponse.json({ ok: true, count: times.length });
   }
 
@@ -61,6 +63,7 @@ export async function POST(req: Request) {
     update: {},
     create: { barberId: profile.id, startsAt },
   });
+  notifyShopLive(profile.slug);
   return NextResponse.json({ slot });
 }
 
@@ -77,10 +80,12 @@ export async function DELETE(req: Request) {
         startsAt: { gte: new Date(`${date}T00:00:00-03:00`), lt: new Date(`${date}T23:59:59-03:00`) },
       },
     });
+    notifyShopLive(profile.slug);
     return NextResponse.json({ ok: true });
   }
   const id = String(body.id || "");
   if (!id) return jsonError("Horário inválido.");
   await prisma.availabilitySlot.deleteMany({ where: { id, barberId: profile.id } });
+  notifyShopLive(profile.slug);
   return NextResponse.json({ ok: true });
 }

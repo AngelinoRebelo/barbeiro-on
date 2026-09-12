@@ -4,6 +4,8 @@ import { parseFeatures } from "@/lib/features";
 import { jsonError } from "@/lib/auth";
 import { slotsFor } from "@/lib/slots";
 
+export const dynamic = "force-dynamic";
+
 type Ctx = { params: Promise<{ slug: string }> };
 
 export async function GET(req: Request, ctx: Ctx) {
@@ -47,5 +49,5 @@ export async function GET(req: Request, ctx: Ctx) {
       approved: shop.approved,
     },
     slots: live ? slots : [],
-  });
+  }, { headers: { "Cache-Control": "no-store" } });
 }

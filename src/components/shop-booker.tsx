@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, inputClass } from "@/components/ui";
 import { brl, CATEGORY_LABEL, ymd } from "@/lib/utils";
@@ -36,15 +36,22 @@ export function ShopBooker({ slug, initialQr, loggedIn = false }: { slug: string
     payerEmail: string;
     preferenceId: string;
   } | null>(null);
+  const queryRef = useRef({ serviceId: "", date: ymd(new Date()) });
+  const reqRef = useRef(0);
+  queryRef.current = { serviceId, date };
 
   const canPay = Boolean(shop?.pix || shop?.mercadopago);
 
-  async function load(sid = serviceId, d = date) {
-    const res = await fetch(`/api/shop/${slug}?date=${d}&serviceId=${sid}`);
+  async function load(sid = queryRef.current.serviceId, d = queryRef.current.date) {
+    const req = ++reqRef.current;
+    const res = await fetch(`/api/shop/${slug}?date=${d}&serviceId=${sid}&t=${Date.now()}`, { cache: "no-store" });
     const data = await res.json();
+    if (req !== reqRef.current) return;
     if (!res.ok) return setMsg(data.error);
     setShop(data.shop);
-    setSlots(data.slots || []);
+    const nextSlots: string[] = data.slots || [];
+    setSlots(nextSlots);
+    setTime((current) => (current && !nextSlots.includes(current) ? "" : current));
     if (!sid && data.shop.services[0]) setServiceId(data.shop.services[0].id);
   }
 
@@ -57,6 +64,21 @@ export function ShopBooker({ slug, initialQr, loggedIn = false }: { slug: string
     if (serviceId) load(serviceId, date);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serviceId, date]);
+
+  useEffect(() => {
+    const live = new EventSource(`/api/shop/${slug}/live`);
+    const refresh = () => {
+      void load();
+    };
+    live.addEventListener("slots", refresh);
+    live.addEventListener("queue", refresh);
+    const poll = window.setInterval(refresh, 2000);
+    return () => {
+      live.close();
+      window.clearInterval(poll);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug]);
 
   async function book(payNow: boolean) {
     setMsg("");

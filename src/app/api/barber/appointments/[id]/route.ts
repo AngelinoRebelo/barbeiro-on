@@ -5,6 +5,7 @@ import type { AppointmentStatus } from "@prisma/client";
 import { hasAccess } from "@/lib/access";
 import { verifyPassword } from "@/lib/password";
 import { paidFrom } from "@/lib/queue-view";
+import { notifyShopLive } from "@/lib/live";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -34,6 +35,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     data: { status: body.status },
     include: { client: true, service: true },
   });
+  notifyShopLive(boxed.auth.user.barberProfile!.slug);
   return NextResponse.json({ appointment });
 }
 
@@ -59,5 +61,6 @@ export async function DELETE(req: Request, ctx: Ctx) {
     where: { id },
     data: { status: "CANCELLED" },
   });
+  notifyShopLive(boxed.auth.user.barberProfile!.slug);
   return NextResponse.json({ ok: true });
 }
