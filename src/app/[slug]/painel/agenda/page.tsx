@@ -2,16 +2,20 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card, Field, inputClass, Badge } from "@/components/ui";
-import { brl, ymd } from "@/lib/utils";
+import { brl, hm, ymd, STATUS_LABEL } from "@/lib/utils";
+import { MpCheckout } from "@/components/mp-checkout-lazy";
 
 type Client = { id: string; name: string };
 type Service = { id: string; name: string; durationMin: number; priceCents: number };
 type Appt = {
   id: string;
   startsAt: string;
+  createdAt: string;
   status: string;
   client: { name: string };
   service: { name: string; priceCents: number };
+  paid: "PAID" | "PENDING" | "UNPAID";
+  queue: { position: number; ahead: number; total: number; waiting: boolean };
 };
 
 export default function AgendaPage() {
@@ -21,6 +25,14 @@ export default function AgendaPage() {
   const [items, setItems] = useState<Appt[]>([]);
   const [form, setForm] = useState({ clientId: "", serviceId: "", time: "10:00", notes: "" });
   const [msg, setMsg] = useState("");
+  const [checkout, setCheckout] = useState<{
+    appointmentId: string;
+    paymentId: string;
+    publicKey: string;
+    amountCents: number;
+    payerEmail: string;
+    preferenceId: string;
+  } | null>(null);
 
   async function load() {
     const [c, s, a] = await Promise.all([
@@ -35,6 +47,8 @@ export default function AgendaPage() {
 
   useEffect(() => {
     load();
+    const timer = setInterval(load, 8000);
+    return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date]);
 
@@ -57,53 +71,103 @@ export default function AgendaPage() {
     const data = await res.json();
     if (!res.ok) setMsg(data.error);
     else {
-      setMsg("Horário reservado.");
+      setMsg("Entrou na fila do dia.");
       load();
     }
   }
 
-  async function pay(id: string, method: "PIX" | "MERCADOPAGO") {
+  async function charge(id: string) {
+    setMsg("");
     const res = await fetch("/api/payments/create", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ appointmentId: id, method }),
+      body: JSON.stringify({ appointmentId: id }),
     });
     const data = await res.json();
     if (!res.ok) return setMsg(data.error);
-    if (data.initPoint) window.location.href = data.initPoint;
-    else window.location.href = data.redirect;
+    setCheckout({
+      appointmentId: id,
+      paymentId: data.paymentId,
+      publicKey: data.publicKey,
+      amountCents: data.amountCents,
+      payerEmail: data.payerEmail,
+      preferenceId: data.preferenceId,
+    });
   }
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
       <Card>
-        <div className="mb-4 flex items-center justify-between">
-          <h2>Dia</h2>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2>Fila do dia</h2>
+            <p className="text-sm text-[#8b93a7]">Ordem de horário. Novos agendamentos entram sozinhos na posição certa.</p>
+          </div>
           <input className={inputClass() + " max-w-44"} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
         <div className="grid gap-2">
-          {items.length === 0 && <p className="text-[#8b93a7]">Nenhum horário neste dia.</p>}
+          {items.length === 0 && <p className="text-[#8b93a7]">Ninguém na fila neste dia.</p>}
           {items.map((a) => (
             <div key={a.id} className="rounded-2xl border border-white/5 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="font-medium">{a.client.name}</p>
-                  <p className="text-sm text-[#8b93a7]">
-                    {new Date(a.startsAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} · {a.service.name} · {brl(a.service.priceCents)}
-                  </p>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex gap-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-gold/30 text-sm text-gold">
+                    {a.queue.waiting ? a.queue.position : "—"}
+                  </span>
+                  <div>
+                    <p className="font-medium">{a.client.name}</p>
+                    <p className="text-sm text-[#8b93a7]">
+                      {hm(new Date(a.startsAt))} · {a.service.name} · {brl(a.service.priceCents)}
+                    </p>
+                  </div>
                 </div>
-                <Badge>{a.status}</Badge>
+                <div className="flex flex-wrap justify-end gap-2">
+                  <Badge>{STATUS_LABEL[a.status] || a.status}</Badge>
+                  <Badge tone={a.paid === "PAID" ? "cyan" : a.paid === "PENDING" ? "gold" : "danger"}>
+                    {a.paid === "PAID" ? "Pago" : a.paid === "PENDING" ? "Pagando" : "A pagar"}
+                  </Badge>
+                </div>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
-                <Button variant="ghost" onClick={() => fetch(`/api/barber/appointments/${a.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ status: "DONE" }) }).then(load)}>
-                  Concluir
-                </Button>
-                <Button variant="ghost" onClick={() => pay(a.id, "PIX")}>PIX</Button>
-                <Button variant="cyan" onClick={() => pay(a.id, "MERCADOPAGO")}>Cartão MP</Button>
+                {a.status !== "DONE" && a.status !== "CANCELLED" && (
+                  <Button
+                    variant="ghost"
+                    onClick={() =>
+                      fetch(`/api/barber/appointments/${a.id}`, {
+                        method: "PATCH",
+                        headers: { "content-type": "application/json" },
+                        body: JSON.stringify({ status: "DONE" }),
+                      }).then(load)
+                    }
+                  >
+                    Concluir
+                  </Button>
+                )}
+                {a.paid !== "PAID" && (
+                  <Button variant="cyan" onClick={() => charge(a.id)}>
+                    Cobrar PIX/cartão
+                  </Button>
+                )}
               </div>
+              {checkout?.appointmentId === a.id && (
+                <div className="mt-4 border-t border-white/5 pt-4">
+                  <MpCheckout
+                    paymentId={checkout.paymentId}
+                    publicKey={checkout.publicKey}
+                    amountCents={checkout.amountCents}
+                    payerEmail={checkout.payerEmail}
+                    preferenceId={checkout.preferenceId}
+                    onPaid={() => {
+                      setCheckout(null);
+                      load();
+                    }}
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>
+        {msg && <p className="mt-3 text-sm text-cyan">{msg}</p>}
       </Card>
       <Card>
         <h2 className="mb-4">Novo horário</h2>
@@ -131,7 +195,6 @@ export default function AgendaPage() {
               ))}
             </select>
           </Field>
-          {msg && <p className="text-sm text-cyan">{msg}</p>}
           <Button className="w-full">Agendar</Button>
         </form>
       </Card>

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { apiUser, jsonError } from "@/lib/auth";
 import { parseFeatures } from "@/lib/features";
 import { combineDateTimeSP } from "@/lib/utils";
+import { queueForAppointment } from "@/lib/queue";
 
 type Ctx = { params: Promise<{ slug: string }> };
 
@@ -68,5 +69,6 @@ export async function POST(req: Request, ctx: Ctx) {
     include: { service: true },
   });
 
-  return NextResponse.json({ appointment });
+  const queue = await queueForAppointment(shop.id, appointment);
+  return NextResponse.json({ appointment, queue });
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button, Card } from "@/components/ui";
 import { brl } from "@/lib/utils";
+import { MpCheckout } from "@/components/mp-checkout-lazy";
 
 export function PlanPay({
   planName,
@@ -16,18 +17,36 @@ export function PlanPay({
   durationDays?: number;
 }) {
   const [msg, setMsg] = useState("");
-  async function pay(method: "PIX" | "MERCADOPAGO") {
+  const [checkout, setCheckout] = useState<{
+    paymentId: string;
+    publicKey: string;
+    amountCents: number;
+    payerEmail: string;
+    preferenceId: string;
+  } | null>(null);
+
+  async function pay() {
     setMsg("");
     const res = await fetch("/api/payments/create", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ kind: "SUBSCRIPTION", method }),
+      body: JSON.stringify({ kind: "SUBSCRIPTION" }),
     });
     const data = await res.json();
     if (!res.ok) return setMsg(data.error);
-    if (data.initPoint) window.location.href = data.initPoint;
-    else window.location.href = data.redirect;
+    if (data.redirect && !data.embed) {
+      window.location.href = data.redirect;
+      return;
+    }
+    setCheckout({
+      paymentId: data.paymentId,
+      publicKey: data.publicKey,
+      amountCents: data.amountCents,
+      payerEmail: data.payerEmail,
+      preferenceId: data.preferenceId,
+    });
   }
+
   return (
     <Card>
       <p className="text-xs uppercase tracking-[0.2em] text-gold">Plano selecionado</p>
@@ -37,13 +56,25 @@ export function PlanPay({
         {durationDays ? ` · ${durationDays} dias de vigência` : ""}
       </p>
       <p className="mt-4 text-sm text-[#8b93a7]">
-        O valor é definido pelo admin e cai na PIX/Mercado Pago da plataforma. Seus PIX e MP da unidade recebem os cortes e barbas.
+        PIX e cartão usam o Mercado Pago da plataforma. A confirmação entra sozinha no sistema.
       </p>
       {msg && <p className="mt-3 text-sm text-[#ff5d73]">{msg}</p>}
-      <div className="mt-6 flex flex-wrap gap-2">
-        <Button onClick={() => pay("PIX")}>Pagar PIX da plataforma</Button>
-        <Button variant="cyan" onClick={() => pay("MERCADOPAGO")}>Pagar no Mercado Pago</Button>
-      </div>
+      {!checkout && (
+        <div className="mt-6">
+          <Button variant="cyan" onClick={pay}>Pagar com Mercado Pago</Button>
+        </div>
+      )}
+      {checkout && (
+        <div className="mt-6">
+          <MpCheckout
+            paymentId={checkout.paymentId}
+            publicKey={checkout.publicKey}
+            amountCents={checkout.amountCents}
+            payerEmail={checkout.payerEmail}
+            preferenceId={checkout.preferenceId}
+          />
+        </div>
+      )}
     </Card>
   );
 }

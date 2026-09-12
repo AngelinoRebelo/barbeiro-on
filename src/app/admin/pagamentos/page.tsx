@@ -23,7 +23,7 @@ export default function AdminPagamentosPage() {
     <Card className="max-w-xl">
       <h2 className="text-2xl">Caixa da plataforma</h2>
       <p className="mt-2 mb-6 text-sm text-[#8b93a7]">
-        Estas credenciais recebem a mensalidade dos barbeiros. A chave PIX e o Mercado Pago de cada unidade (cortes e barbas) o barbeiro cadastra no próprio painel.
+        Estas credenciais recebem a mensalidade dos barbeiros via Mercado Pago (PIX e cartão, com confirmação automática). PIX e cartão de cada unidade o barbeiro cadastra no próprio painel.
       </p>
       <form
         className="space-y-3"

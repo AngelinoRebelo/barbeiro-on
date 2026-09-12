@@ -1,22 +1,18 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
-import { qrDataUrl } from "@/lib/qr";
 import { brl, formatWhen } from "@/lib/utils";
 import { Card, Badge, Logo } from "@/components/ui";
-import { PayActions } from "@/components/pay-actions";
-import { shopPath, shopUrl, isReservedSlug } from "@/lib/paths";
+import { shopPath, isReservedSlug } from "@/lib/paths";
+import { credentialsForPayment } from "@/lib/payments";
+import { MpCheckout } from "@/components/mp-checkout-lazy";
 
 export default async function ShopPagarPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ slug: string; id: string }>;
-  searchParams: Promise<{ status?: string }>;
 }) {
   const { slug, id } = await params;
   if (isReservedSlug(slug)) notFound();
-  const sp = await searchParams;
   const payment = await prisma.payment.findUnique({
     where: { id },
     include: {
@@ -26,13 +22,8 @@ export default async function ShopPagarPage({
     },
   });
   if (!payment || payment.barber.slug !== slug) notFound();
-  const session = await getSession();
-  const isBarber = session?.role === "BARBER" && session.sub === payment.barber.userId;
-  const isAdmin = session?.role === "ADMIN";
+  const creds = await credentialsForPayment(payment);
   const label = payment.kind === "SUBSCRIPTION" ? "Mensalidade da plataforma" : payment.appointment?.service.name;
-  const qr = payment.pixPayload
-    ? await qrDataUrl(payment.pixPayload)
-    : await qrDataUrl(shopUrl(slug, `/pagar/${payment.id}`));
 
   return (
     <div className="grid-bg grid min-h-screen place-items-center px-4 py-10">
@@ -42,27 +33,24 @@ export default async function ShopPagarPage({
         <p className="text-[#8b93a7]">{payment.barber.shopName} · {label}</p>
         <p className="mt-2 text-4xl text-gold">{brl(payment.amountCents)}</p>
         <div className="mt-3 flex gap-2">
-          <Badge>{payment.method}</Badge>
+          <Badge>{payment.method === "PIX" ? "PIX" : "Mercado Pago"}</Badge>
           <Badge>{payment.kind === "SUBSCRIPTION" ? "plano" : "serviço"}</Badge>
-          <Badge tone={payment.status === "PAID" ? "cyan" : "muted"}>{payment.status}</Badge>
+          <Badge tone={payment.status === "PAID" ? "cyan" : "muted"}>{payment.status === "PAID" ? "Pago" : "A pagar"}</Badge>
         </div>
-        {sp.status && <p className="mt-3 text-sm text-cyan">Retorno Mercado Pago: {sp.status}</p>}
-        {payment.method === "PIX" && payment.pixPayload && payment.status !== "PAID" && (
-          <div className="mt-6">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={qr} alt="QR PIX" className="w-56 rounded-2xl" />
-            <p className="mt-3 text-xs uppercase tracking-[0.2em] text-[#8b93a7]">PIX copia e cola</p>
-            <p className="mt-1 break-all font-mono text-xs text-gold">{payment.pixPayload}</p>
-          </div>
-        )}
         <p className="mt-4 text-sm text-[#8b93a7]">Criado em {formatWhen(payment.createdAt)}</p>
-        <PayActions
-          id={payment.id}
-          method={payment.method}
-          status={payment.status}
-          initPoint={payment.mpInitPoint}
-          canConfirm={payment.kind === "SUBSCRIPTION" ? Boolean(isAdmin) : Boolean(isBarber || isAdmin)}
-        />
+        <div className="mt-6">
+          {payment.status === "PAID" ? (
+            <p className="text-cyan">Pagamento confirmado automaticamente.</p>
+          ) : (
+            <MpCheckout
+              paymentId={payment.id}
+              publicKey={creds.publicKey}
+              amountCents={payment.amountCents}
+              payerEmail={payment.client?.email || ""}
+              preferenceId={payment.mpPreferenceId || ""}
+            />
+          )}
+        </div>
       </Card>
     </div>
   );

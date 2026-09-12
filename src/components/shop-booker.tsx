@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, inputClass } from "@/components/ui";
 import { brl, CATEGORY_LABEL, ymd } from "@/lib/utils";
+import { queueLabel, type QueueInfo } from "@/lib/queue-view";
+import { MpCheckout } from "@/components/mp-checkout-lazy";
 
 type Shop = {
   shopName: string;
@@ -26,6 +28,16 @@ export function ShopBooker({ slug, initialQr }: { slug: string; initialQr: strin
   const [slots, setSlots] = useState<string[]>([]);
   const [time, setTime] = useState("");
   const [msg, setMsg] = useState("");
+  const [queue, setQueue] = useState<QueueInfo | null>(null);
+  const [checkout, setCheckout] = useState<{
+    paymentId: string;
+    publicKey: string;
+    amountCents: number;
+    payerEmail: string;
+    preferenceId: string;
+  } | null>(null);
+
+  const canPay = Boolean(shop?.pix || shop?.mercadopago);
 
   async function load(sid = serviceId, d = date) {
     const res = await fetch(`/api/shop/${slug}?date=${d}&serviceId=${sid}`);
@@ -46,7 +58,7 @@ export function ShopBooker({ slug, initialQr }: { slug: string; initialQr: strin
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serviceId, date]);
 
-  async function book(method?: "PIX" | "MERCADOPAGO") {
+  async function book(payNow: boolean) {
     setMsg("");
     const res = await fetch(`/api/shop/${slug}/book`, {
       method: "POST",
@@ -58,20 +70,27 @@ export function ShopBooker({ slug, initialQr }: { slug: string; initialQr: strin
       if (res.status === 401) return router.push(`/${slug}/login`);
       return setMsg(data.error);
     }
-    if (!method) {
-      setMsg("Horário reservado.");
+    setQueue(data.queue || null);
+    if (!payNow || !canPay) {
+      setMsg("Horário reservado. Acompanhe a fila no portal.");
       router.push(`/${slug}/portal/agenda`);
       return;
     }
     const pay = await fetch("/api/payments/create", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ appointmentId: data.appointment.id, method }),
+      body: JSON.stringify({ appointmentId: data.appointment.id }),
     });
     const pdata = await pay.json();
     if (!pay.ok) return setMsg(pdata.error);
-    if (pdata.initPoint) window.location.href = pdata.initPoint;
-    else router.push(pdata.redirect);
+    setCheckout({
+      paymentId: pdata.paymentId,
+      publicKey: pdata.publicKey,
+      amountCents: pdata.amountCents,
+      payerEmail: pdata.payerEmail,
+      preferenceId: pdata.preferenceId,
+    });
+    setMsg("Horário reservado. Pague abaixo para confirmar.");
   }
 
   if (!shop) return <p className="text-[#8b93a7]">{msg || "Carregando unidade..."}</p>;
@@ -109,18 +128,47 @@ export function ShopBooker({ slug, initialQr }: { slug: string; initialQr: strin
             ))}
           </div>
         </div>
+        {queue && (
+          <div className="mt-4 rounded-2xl border border-cyan/30 px-4 py-3">
+            <p className="text-sm uppercase tracking-[0.2em] text-cyan">Sua vez</p>
+            <p className="mt-1 text-lg">{queueLabel(queue)}</p>
+            <p className="text-sm text-[#8b93a7]">Você é o {queue.position}º de {queue.total} neste dia.</p>
+          </div>
+        )}
         {msg && <p className="mt-3 text-sm text-cyan">{msg}</p>}
-        <div className="mt-6 flex flex-wrap gap-2">
-          {shop.live === false ? (
-            <p className="text-sm text-gold">Agenda libera quando o admin aprovar a unidade. Crie sua conta nesta barbearia pelo botão acima.</p>
-          ) : (
-            <>
-              <Button onClick={() => book()} disabled={!time}>Reservar</Button>
-              {shop.pix && <Button variant="ghost" onClick={() => book("PIX")} disabled={!time}>Reservar + PIX</Button>}
-              {shop.mercadopago && <Button variant="cyan" onClick={() => book("MERCADOPAGO")} disabled={!time}>Reservar + cartão</Button>}
-            </>
-          )}
-        </div>
+        {!checkout && (
+          <div className="mt-6 flex flex-wrap gap-2">
+            {shop.live === false ? (
+              <p className="text-sm text-gold">Agenda libera quando o admin aprovar a unidade. Crie sua conta nesta barbearia pelo botão acima.</p>
+            ) : (
+              <>
+                {canPay && (
+                  <Button onClick={() => book(true)} disabled={!time}>
+                    Confirmar e pagar
+                  </Button>
+                )}
+                <Button variant="ghost" onClick={() => book(false)} disabled={!time}>
+                  Só reservar
+                </Button>
+              </>
+            )}
+          </div>
+        )}
+        {checkout && (
+          <div className="mt-6 border-t border-white/5 pt-4">
+            <MpCheckout
+              paymentId={checkout.paymentId}
+              publicKey={checkout.publicKey}
+              amountCents={checkout.amountCents}
+              payerEmail={checkout.payerEmail}
+              preferenceId={checkout.preferenceId}
+              onPaid={() => {
+                setMsg("Pagamento confirmado. Acompanhe a fila no portal.");
+                router.push(`/${slug}/portal/agenda`);
+              }}
+            />
+          </div>
+        )}
       </Card>
       <Card>
         <h2>Entrada da sessão</h2>
@@ -128,8 +176,8 @@ export function ShopBooker({ slug, initialQr }: { slug: string; initialQr: strin
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={initialQr} alt="QR da unidade" className="mt-4 w-full rounded-2xl" />
         <div className="mt-3 flex gap-2">
-          <Badge tone="cyan">{shop.pix ? "PIX on" : "PIX off"}</Badge>
-          <Badge>{shop.mercadopago ? "MP on" : "MP off"}</Badge>
+          <Badge tone="cyan">{shop.pix ? "PIX MP" : "PIX off"}</Badge>
+          <Badge>{shop.mercadopago ? "Cartão MP" : "Cartão off"}</Badge>
         </div>
       </Card>
     </div>

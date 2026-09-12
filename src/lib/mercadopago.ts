@@ -51,3 +51,15 @@ export async function getMpPayment(accessToken: string, paymentId: string) {
   const api = new Payment(mpClient(accessToken));
   return api.get({ id: paymentId });
 }
+
+export async function createMpApiPayment(
+  accessToken: string,
+  body: Record<string, unknown>,
+  idempotencyKey: string,
+) {
+  const api = new Payment(mpClient(accessToken));
+  return api.create({
+    body: body as never,
+    requestOptions: { idempotencyKey },
+  });
+}

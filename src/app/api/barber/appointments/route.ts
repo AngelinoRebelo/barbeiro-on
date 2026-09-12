@@ -5,6 +5,7 @@ import { appointmentSchema } from "@/lib/validators";
 import { parseFeatures } from "@/lib/features";
 import { combineDateTimeSP } from "@/lib/utils";
 import { hasAccess } from "@/lib/access";
+import { paidFrom, queueForAppointment } from "@/lib/queue";
 
 async function barber() {
   const ctx = await apiUser();
@@ -29,11 +30,18 @@ export async function GET(req: Request) {
     : { barberId: ctx.profile.id };
   const appointments = await prisma.appointment.findMany({
     where,
-    include: { client: true, service: true },
-    orderBy: { startsAt: "asc" },
+    include: { client: true, service: true, payments: { select: { status: true } } },
+    orderBy: [{ startsAt: "asc" }, { createdAt: "asc" }],
     take: 200,
   });
-  return NextResponse.json({ appointments });
+  const queued = await Promise.all(
+    appointments.map(async (a) => ({
+      ...a,
+      paid: paidFrom(a.payments),
+      queue: await queueForAppointment(ctx.profile.id, a),
+    })),
+  );
+  return NextResponse.json({ appointments: queued });
 }
 
 export async function POST(req: Request) {

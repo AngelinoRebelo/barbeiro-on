@@ -56,7 +56,9 @@ export default function ConfigPage() {
       </Card>
       <Card>
         <h2 className="mb-2">Recebimentos do contratante</h2>
-        <p className="mb-4 text-sm text-[#8b93a7]">Cadastre a chave PIX da barbearia e as credenciais do Mercado Pago (Public Key + Access Token) para cartão.</p>
+        <p className="mb-4 text-sm text-[#8b93a7]">
+          PIX e cartão passam pelo Mercado Pago cadastrado (Public Key + Access Token). A confirmação entra sozinha no sistema, na própria página. A chave PIX avulsa não é mais usada para cobrar o cliente.
+        </p>
         <form
           className="space-y-3"
           onSubmit={async (e) => {
