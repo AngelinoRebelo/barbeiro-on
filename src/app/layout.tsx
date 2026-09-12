@@ -13,7 +13,7 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BARBEIRO ON · Plataforma de barbearias",
+  title: "BARBEIRO ONLINE",
   description: "Gestão de unidades, clientes, agenda e pagamentos PIX + Mercado Pago.",
 };
 

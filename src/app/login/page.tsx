@@ -9,7 +9,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <Logo />
         <h1 className="mt-6 text-2xl font-semibold">Acesso</h1>
-        <p className="mb-6 text-sm text-[#8b93a7]">Admin e barbeiro entram aqui. Cliente usa o link da própria barbearia.</p>
+        <p className="mb-6 text-sm text-[#8b93a7]">Cliente, barbeiro e admin. Depois do login, o cliente continua na área da barbearia.</p>
         <Suspense>
           <LoginForm />
         </Suspense>

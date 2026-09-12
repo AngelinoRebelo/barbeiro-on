@@ -33,8 +33,16 @@ export default function ClientesPage() {
               <Button
                 variant="ghost"
                 onClick={async () => {
-                  await fetch(`/api/barber/clients/${c.id}`, { method: "DELETE" });
-                  load();
+                  const password = window.prompt("Confirme com sua senha para excluir este cliente.");
+                  if (!password) return;
+                  const res = await fetch(`/api/barber/clients/${c.id}`, {
+                    method: "DELETE",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({ password }),
+                  });
+                  const data = await res.json();
+                  if (!res.ok) setMsg(data.error || "Não foi possível excluir.");
+                  else load();
                 }}
               >
                 Remover

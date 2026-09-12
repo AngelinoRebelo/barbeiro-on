@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button, Field, inputClass } from "./ui";
 import { brl } from "@/lib/utils";
@@ -18,35 +18,12 @@ type Plan = {
 };
 
 export function LoginForm({ shopSlug }: { shopSlug?: string }) {
-  const router = useRouter();
   const params = useSearchParams();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState(params.get("erro") === "suspenso" ? "Conta suspensa." : "");
+  const [error, setError] = useState(params.get("erro") || "");
   const [info, setInfo] = useState("");
-  const [loading, setLoading] = useState(false);
+  const next = params.get("next") || "";
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    setInfo("");
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email, password, shopSlug }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setError(data.error || "Falha no login.");
-      setLoading(false);
-      return;
-    }
-    router.push(data.redirect);
-    router.refresh();
-  }
-
-  async function resend() {
+  async function resend(email: string) {
     if (!email) return setError("Informe o e-mail para reenviar.");
     const res = await fetch("/api/auth/resend", {
       method: "POST",
@@ -58,21 +35,45 @@ export function LoginForm({ shopSlug }: { shopSlug?: string }) {
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4">
+    <form method="post" action="/api/auth/login" className="space-y-4" autoComplete="on">
+      {shopSlug ? <input type="hidden" name="shopSlug" value={shopSlug} /> : null}
+      {next ? <input type="hidden" name="next" value={next} /> : null}
       <Field label="E-mail">
-        <input className={inputClass()} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <input
+          className={inputClass()}
+          type="email"
+          name="email"
+          id="email"
+          autoComplete="username"
+          inputMode="email"
+          required
+        />
       </Field>
       <Field label="Senha">
-        <input className={inputClass()} type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        <input
+          className={inputClass()}
+          type="password"
+          name="password"
+          id="password"
+          autoComplete="current-password"
+          required
+        />
       </Field>
       {error && <p className="text-sm text-[#ff5d73]">{error}</p>}
       {info && <p className="text-sm text-cyan">{info}</p>}
-      <Button className="w-full" disabled={loading}>
-        {loading ? "Entrando..." : "Entrar"}
+      <Button className="w-full" type="submit">
+        Entrar
       </Button>
       <div className="flex justify-between text-sm text-[#8b93a7]">
         <Link href="/recuperar">Esqueci a senha</Link>
-        <button type="button" onClick={resend} className="text-gold">
+        <button
+          type="button"
+          onClick={() => {
+            const email = (document.getElementById("email") as HTMLInputElement | null)?.value || "";
+            resend(email);
+          }}
+          className="text-gold"
+        >
           Reenviar confirmação
         </button>
       </div>
@@ -166,13 +167,13 @@ export function BarberRegisterForm() {
         )}
       </div>
       <Field label="E-mail">
-        <input className={inputClass()} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+        <input className={inputClass()} type="email" name="email" autoComplete="username" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
       </Field>
       <Field label="Telefone">
         <input className={inputClass()} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
       </Field>
       <Field label="Senha">
-        <input className={inputClass()} type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+        <input className={inputClass()} type="password" name="password" autoComplete="new-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
       </Field>
       <p className="text-xs uppercase tracking-[0.22em] text-gold">Recebimento dos seus serviços</p>
       <Field label="Tipo da chave PIX">
@@ -230,13 +231,13 @@ export function ClientRegisterForm({ shopSlug, shopName }: { shopSlug: string; s
         <input className={inputClass()} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
       </Field>
       <Field label="E-mail">
-        <input className={inputClass()} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+        <input className={inputClass()} type="email" name="email" autoComplete="username" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
       </Field>
       <Field label="Telefone">
         <input className={inputClass()} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
       </Field>
       <Field label="Senha">
-        <input className={inputClass()} type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+        <input className={inputClass()} type="password" name="password" autoComplete="new-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
       </Field>
       {error && <p className="text-sm text-[#ff5d73]">{error}</p>}
       {ok && <p className="text-sm text-cyan">{ok}</p>}

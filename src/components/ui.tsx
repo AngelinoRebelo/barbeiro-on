@@ -11,7 +11,7 @@ export function Logo({ compact = false, href = "/" }: { compact?: boolean; href?
       {!compact && (
         <span className="leading-none">
           <span className="block text-[11px] tracking-[0.38em] text-gold">BARBEIRO</span>
-          <span className="block text-lg font-semibold">plataforma</span>
+          <span className="block text-lg font-semibold">online</span>
         </span>
       )}
     </Link>

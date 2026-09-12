@@ -20,7 +20,7 @@ type Shop = {
   services: { id: string; name: string; category: string; durationMin: number; priceCents: number }[];
 };
 
-export function ShopBooker({ slug, initialQr }: { slug: string; initialQr: string }) {
+export function ShopBooker({ slug, initialQr, loggedIn = false }: { slug: string; initialQr: string; loggedIn?: boolean }) {
   const router = useRouter();
   const [shop, setShop] = useState<Shop | null>(null);
   const [serviceId, setServiceId] = useState("");
@@ -67,12 +67,12 @@ export function ShopBooker({ slug, initialQr }: { slug: string; initialQr: strin
     });
     const data = await res.json();
     if (!res.ok) {
-      if (res.status === 401) return router.push(`/${slug}/login`);
+      if (res.status === 401) return router.push(`/${slug}/login?next=${encodeURIComponent(`/${slug}`)}`);
       return setMsg(data.error);
     }
     setQueue(data.queue || null);
     if (!payNow || !canPay) {
-      setMsg("Horário reservado. Acompanhe a fila no portal.");
+      setMsg("Horário reservado. Acompanhe a fila na sua área.");
       router.push(`/${slug}/portal/agenda`);
       return;
     }
@@ -120,7 +120,7 @@ export function ShopBooker({ slug, initialQr }: { slug: string; initialQr: strin
         <div className="mt-6 grid gap-3 md:grid-cols-2">
           <input className={inputClass()} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           <div className="flex flex-wrap gap-2">
-            {slots.length === 0 && <p className="text-sm text-[#8b93a7]">Sem horários neste dia.</p>}
+            {slots.length === 0 && <p className="text-sm text-[#8b93a7]">Sem horários livres neste dia. O barbeiro libera os horários na agenda.</p>}
             {slots.map((t) => (
               <button key={t} onClick={() => setTime(t)} className={`rounded-full border px-3 py-1 text-sm ${time === t ? "border-gold text-gold" : "border-white/10"}`}>
                 {t}
@@ -143,9 +143,9 @@ export function ShopBooker({ slug, initialQr }: { slug: string; initialQr: strin
             ) : (
               <>
                 {canPay && (
-                  <Button onClick={() => book(true)} disabled={!time}>
-                    Confirmar e pagar
-                  </Button>
+              <Button onClick={() => book(true)} disabled={!time}>
+                {loggedIn ? "Confirmar e pagar" : "Entrar, confirmar e pagar"}
+              </Button>
                 )}
                 <Button variant="ghost" onClick={() => book(false)} disabled={!time}>
                   Só reservar

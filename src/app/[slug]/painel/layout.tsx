@@ -39,7 +39,7 @@ export default async function PainelLayout({
     .map((i) => ({ href: i.href, label: i.label }));
 
   return (
-    <AppShell title={user.barberProfile.shopName} subtitle={`/${slug}`} nav={nav} homeHref={shopPath(slug)}>
+    <AppShell title={user.barberProfile.shopName} subtitle={`/${slug}`} nav={nav} homeHref={shopPath(slug)} logoutHref={shopPath(slug, "/login")}>
       {children}
     </AppShell>
   );

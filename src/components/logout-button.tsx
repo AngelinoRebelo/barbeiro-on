@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "./ui";
 
-export function LogoutButton() {
+export function LogoutButton({ href = "/login" }: { href?: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   return (
@@ -13,7 +13,7 @@ export function LogoutButton() {
       onClick={async () => {
         setLoading(true);
         await fetch("/api/auth/logout", { method: "POST" });
-        router.push("/login");
+        router.push(href);
         router.refresh();
       }}
     >

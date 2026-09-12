@@ -96,6 +96,24 @@ export function PortalAgenda({ slug }: { slug: string }) {
                       Pagar agora
                     </Button>
                   )}
+                  {a.paid !== "PAID" && a.status !== "CANCELLED" && a.status !== "DONE" && (
+                    <Button
+                      variant="danger"
+                      type="button"
+                      onClick={async () => {
+                        if (!confirm("Excluir este horário?")) return;
+                        const res = await fetch(`/api/portal/appointments/${a.id}`, { method: "DELETE" });
+                        const data = await res.json();
+                        if (!res.ok) setMsg(data.error);
+                        else {
+                          setCheckout(null);
+                          load();
+                        }
+                      }}
+                    >
+                      Excluir
+                    </Button>
+                  )}
                   <Link href={shopPath(a.barber.slug)}>
                     <Button variant="ghost" type="button">Agendar de novo</Button>
                   </Link>

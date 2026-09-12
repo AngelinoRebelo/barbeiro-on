@@ -41,6 +41,12 @@ export async function GET(req: Request) {
       queue: await queueForAppointment(ctx.profile.id, a),
     })),
   );
+  queued.sort((a, b) => {
+    const aDone = a.status === "DONE" || a.status === "CANCELLED" || a.status === "NO_SHOW";
+    const bDone = b.status === "DONE" || b.status === "CANCELLED" || b.status === "NO_SHOW";
+    if (aDone !== bDone) return aDone ? 1 : -1;
+    return new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime();
+  });
   return NextResponse.json({ appointments: queued });
 }
 

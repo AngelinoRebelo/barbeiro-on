@@ -17,12 +17,20 @@ type Appt = {
   paid: "PAID" | "PENDING" | "UNPAID";
   queue: { position: number; ahead: number; total: number; waiting: boolean };
 };
+type Slot = { id: string; time: string };
+
+function askPassword(label: string) {
+  const value = window.prompt(label);
+  return value?.trim() || "";
+}
 
 export default function AgendaPage() {
   const [date, setDate] = useState(ymd(new Date()));
   const [clients, setClients] = useState<Client[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [items, setItems] = useState<Appt[]>([]);
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const [newTime, setNewTime] = useState("10:00");
   const [form, setForm] = useState({ clientId: "", serviceId: "", time: "10:00", notes: "" });
   const [msg, setMsg] = useState("");
   const [checkout, setCheckout] = useState<{
@@ -34,15 +42,25 @@ export default function AgendaPage() {
     preferenceId: string;
   } | null>(null);
 
+  const times = useMemo(() => {
+    const out: string[] = [];
+    for (let h = 8; h <= 21; h++) {
+      out.push(`${String(h).padStart(2, "0")}:00`, `${String(h).padStart(2, "0")}:30`);
+    }
+    return out;
+  }, []);
+
   async function load() {
-    const [c, s, a] = await Promise.all([
+    const [c, s, a, sl] = await Promise.all([
       fetch("/api/barber/clients").then((r) => r.json()),
       fetch("/api/barber/services").then((r) => r.json()),
       fetch(`/api/barber/appointments?date=${date}`).then((r) => r.json()),
+      fetch(`/api/barber/slots?date=${date}`).then((r) => r.json()),
     ]);
     setClients(c.clients || []);
     setServices((s.services || []).filter((x: Service & { active?: boolean }) => x.active !== false));
     setItems(a.appointments || []);
+    setSlots(sl.slots || []);
   }
 
   useEffect(() => {
@@ -51,14 +69,6 @@ export default function AgendaPage() {
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date]);
-
-  const times = useMemo(() => {
-    const out: string[] = [];
-    for (let h = 8; h <= 21; h++) {
-      out.push(`${String(h).padStart(2, "0")}:00`, `${String(h).padStart(2, "0")}:30`);
-    }
-    return out;
-  }, []);
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -95,20 +105,61 @@ export default function AgendaPage() {
     });
   }
 
+  async function removeAppt(id: string, paid: string) {
+    if (paid === "PAID") return setMsg("Não é possível excluir um horário já pago.");
+    const password = askPassword("Confirme com sua senha para excluir este cliente da fila.");
+    if (!password) return;
+    const res = await fetch(`/api/barber/appointments/${id}`, {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    const data = await res.json();
+    if (!res.ok) setMsg(data.error);
+    else load();
+  }
+
+  async function addSlot() {
+    setMsg("");
+    const res = await fetch("/api/barber/slots", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ date, time: newTime }),
+    });
+    const data = await res.json();
+    if (!res.ok) setMsg(data.error);
+    else load();
+  }
+
+  async function generateSlots() {
+    setMsg("");
+    const res = await fetch("/api/barber/slots", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ date, action: "generate" }),
+    });
+    const data = await res.json();
+    if (!res.ok) setMsg(data.error);
+    else {
+      setMsg(`${data.count} horários liberados para os clientes.`);
+      load();
+    }
+  }
+
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
       <Card>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2>Fila do dia</h2>
-            <p className="text-sm text-[#8b93a7]">Ordem de horário. Novos agendamentos entram sozinhos na posição certa.</p>
+            <p className="text-sm text-[#8b93a7]">Quem conclui vai para o final. Novos horários entram na ordem certa.</p>
           </div>
           <input className={inputClass() + " max-w-44"} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
         <div className="grid gap-2">
           {items.length === 0 && <p className="text-[#8b93a7]">Ninguém na fila neste dia.</p>}
           {items.map((a) => (
-            <div key={a.id} className="rounded-2xl border border-white/5 p-4">
+            <div key={a.id} className={`rounded-2xl border p-4 ${a.status === "DONE" || a.status === "CANCELLED" ? "border-white/5 opacity-70" : "border-white/5"}`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex gap-3">
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-gold/30 text-sm text-gold">
@@ -143,9 +194,14 @@ export default function AgendaPage() {
                     Concluir
                   </Button>
                 )}
-                {a.paid !== "PAID" && (
+                {a.paid !== "PAID" && a.status !== "CANCELLED" && (
                   <Button variant="cyan" onClick={() => charge(a.id)}>
                     Cobrar PIX/cartão
+                  </Button>
+                )}
+                {a.paid !== "PAID" && a.status !== "CANCELLED" && (
+                  <Button variant="danger" onClick={() => removeAppt(a.id, a.paid)}>
+                    Excluir
                   </Button>
                 )}
               </div>
@@ -169,35 +225,73 @@ export default function AgendaPage() {
         </div>
         {msg && <p className="mt-3 text-sm text-cyan">{msg}</p>}
       </Card>
-      <Card>
-        <h2 className="mb-4">Novo horário</h2>
-        <form className="space-y-3" onSubmit={create}>
-          <Field label="Cliente">
-            <select className={inputClass()} value={form.clientId} onChange={(e) => setForm({ ...form, clientId: e.target.value })} required>
-              <option value="">Selecionar</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Serviço">
-            <select className={inputClass()} value={form.serviceId} onChange={(e) => setForm({ ...form, serviceId: e.target.value })} required>
-              <option value="">Selecionar</option>
-              {services.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Hora">
-            <select className={inputClass()} value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })}>
+      <div className="space-y-4">
+        <Card>
+          <h2 className="mb-2">Horários livres</h2>
+          <p className="mb-4 text-sm text-[#8b93a7]">Estes horários aparecem para o cliente escolher na página da barbearia.</p>
+          <div className="mb-3 flex flex-wrap gap-2">
+            {slots.length === 0 && <p className="text-sm text-[#8b93a7]">Nenhum horário publicado neste dia. Sem isso, o expediente padrão é usado.</p>}
+            {slots.map((slot) => (
+              <button
+                key={slot.id}
+                className="rounded-full border border-gold/30 px-3 py-1 text-sm text-gold"
+                onClick={async () => {
+                  await fetch("/api/barber/slots", {
+                    method: "DELETE",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({ id: slot.id }),
+                  });
+                  load();
+                }}
+              >
+                {slot.time} ×
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <select className={inputClass()} value={newTime} onChange={(e) => setNewTime(e.target.value)}>
               {times.map((t) => (
                 <option key={t}>{t}</option>
               ))}
             </select>
-          </Field>
-          <Button className="w-full">Agendar</Button>
-        </form>
-      </Card>
+            <Button variant="ghost" type="button" onClick={addSlot}>
+              Liberar
+            </Button>
+          </div>
+          <Button className="mt-3 w-full" variant="cyan" type="button" onClick={generateSlots}>
+            Liberar expediente do dia
+          </Button>
+        </Card>
+        <Card>
+          <h2 className="mb-4">Encaixar cliente</h2>
+          <form className="space-y-3" onSubmit={create}>
+            <Field label="Cliente">
+              <select className={inputClass()} value={form.clientId} onChange={(e) => setForm({ ...form, clientId: e.target.value })} required>
+                <option value="">Selecionar</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Serviço">
+              <select className={inputClass()} value={form.serviceId} onChange={(e) => setForm({ ...form, serviceId: e.target.value })} required>
+                <option value="">Selecionar</option>
+                {services.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Hora">
+              <select className={inputClass()} value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })}>
+                {times.map((t) => (
+                  <option key={t}>{t}</option>
+                ))}
+              </select>
+            </Field>
+            <Button className="w-full">Agendar</Button>
+          </form>
+        </Card>
+      </div>
     </div>
   );
 }

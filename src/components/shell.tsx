@@ -9,12 +9,14 @@ export function AppShell({
   nav,
   children,
   homeHref = "/",
+  logoutHref = "/login",
 }: {
   title: string;
   subtitle: string;
   nav: { href: string; label: string; active?: boolean }[];
   children: React.ReactNode;
   homeHref?: string;
+  logoutHref?: string;
 }) {
   return (
     <div className="grid-bg min-h-screen">
@@ -37,7 +39,7 @@ export function AppShell({
             ))}
           </nav>
           <div className="mt-8">
-            <LogoutButton />
+            <LogoutButton href={logoutHref} />
           </div>
         </aside>
         <main className="p-5 lg:p-8">

@@ -19,7 +19,7 @@ export default async function PortalLayout({
     { href: shopPath(slug), label: "Agendar" },
   ];
   return (
-    <AppShell title="Área do cliente" subtitle={`/${slug}`} nav={nav} homeHref={shopPath(slug)}>
+    <AppShell title="Área do cliente" subtitle={`/${slug}`} nav={nav} homeHref={shopPath(slug)} logoutHref={shopPath(slug)}>
       {children}
     </AppShell>
   );

@@ -138,6 +138,7 @@ model BarberProfile {
   clients      BarberClient[]
   appointments Appointment[]
   payments     Payment[]
+  availability AvailabilitySlot[]
 }
 
 model Plan {
@@ -164,6 +165,17 @@ model PlatformSettings {
   mpAccessEnc String     @default("")
   trialDays   Int        @default(30)
   updatedAt   DateTime   @updatedAt
+}
+
+model AvailabilitySlot {
+  id        String        @id @default(cuid())
+  barberId  String
+  barber    BarberProfile @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  startsAt  DateTime
+  createdAt DateTime      @default(now())
+
+  @@unique([barberId, startsAt])
+  @@index([barberId, startsAt])
 }
 
 model Service {

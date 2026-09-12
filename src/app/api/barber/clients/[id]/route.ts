@@ -5,6 +5,7 @@ import { clientSchema } from "@/lib/validators";
 import { parseFeatures } from "@/lib/features";
 import { removeShopClientAccount } from "@/lib/clients";
 import { hasAccess } from "@/lib/access";
+import { verifyPassword } from "@/lib/password";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -33,10 +34,19 @@ export async function PATCH(req: Request, ctx: Ctx) {
   return NextResponse.json({ client });
 }
 
-export async function DELETE(_: Request, ctx: Ctx) {
+export async function DELETE(req: Request, ctx: Ctx) {
   const { id } = await ctx.params;
   const boxed = await scoped(id);
   if (!boxed?.client) return jsonError("Cliente não encontrado.", 404);
+  const body = await req.json().catch(() => ({}));
+  const password = String(body.password || "");
+  if (!password) return jsonError("Informe sua senha para excluir.");
+  const ok = await verifyPassword(password, boxed.ctx.user.passwordHash);
+  if (!ok) return jsonError("Senha incorreta.");
+  const paid = await prisma.payment.findFirst({
+    where: { clientId: id, status: "PAID" },
+  });
+  if (paid) return jsonError("Não é possível excluir um cliente que já pagou.");
   const { client, profile } = boxed;
   await prisma.barberClient.delete({ where: { id } });
   await removeShopClientAccount({
