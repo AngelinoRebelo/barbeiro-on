@@ -2,7 +2,7 @@
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "npx prisma generate && npm run build"
+    "buildCommand": "npm install @tailwindcss/postcss@4 tailwindcss@4 --no-save && npx prisma generate && npm run build"
   },
   "deploy": {
     "startCommand": "npx prisma migrate deploy && npx tsx prisma/seed.ts && npm start",
