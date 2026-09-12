@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Card, Field, inputClass } from "@/components/ui";
+import { Badge, Button, Card, Field, inputClass } from "@/components/ui";
 import { brl } from "@/lib/utils";
 
 type Plan = {
@@ -13,6 +13,7 @@ type Plan = {
   interval: string;
   durationDays: number;
   active: boolean;
+  units?: number;
 };
 
 export default function PlanosAdminPage() {
@@ -20,6 +21,7 @@ export default function PlanosAdminPage() {
   const [trialDays, setTrialDays] = useState("30");
   const [form, setForm] = useState({ name: "", description: "", price: "99,00", interval: "MONTHLY", durationDays: "30" });
   const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState("");
 
   async function load() {
     const [plansRes, billingRes] = await Promise.all([fetch("/api/admin/plans"), fetch("/api/admin/billing")]);
@@ -33,6 +35,37 @@ export default function PlanosAdminPage() {
 
   function toCents(v: string) {
     return Math.round(Number(v.replace(".", "").replace(",", ".")) * 100) || 0;
+  }
+
+  async function patchPlan(id: string, body: object, okMsg: string) {
+    setBusy(id);
+    setMsg("");
+    const res = await fetch(`/api/admin/plans/${id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    setBusy("");
+    if (!res.ok) return setMsg(data.error || "Não foi possível atualizar o plano.");
+    setMsg(okMsg);
+    await load();
+  }
+
+  async function removePlan(p: Plan) {
+    const units = p.units || 0;
+    const warn = units
+      ? `Excluir o plano ${p.name}? ${units} unidade${units === 1 ? "" : "s"} deixam de ter este plano.`
+      : `Excluir o plano ${p.name}? Esta ação não pode ser desfeita.`;
+    if (!confirm(warn)) return;
+    setBusy(p.id);
+    setMsg("");
+    const res = await fetch(`/api/admin/plans/${p.id}`, { method: "DELETE" });
+    const data = await res.json().catch(() => ({}));
+    setBusy("");
+    if (!res.ok) return setMsg(data.error || "Não foi possível excluir o plano.");
+    setMsg(`${p.name} foi excluído.`);
+    await load();
   }
 
   return (
@@ -68,42 +101,47 @@ export default function PlanosAdminPage() {
             {plans.map((p) => (
               <div key={p.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/5 px-4 py-3">
                 <div>
-                  <p>{p.name} · {brl(p.priceCents)}/{p.interval === "YEARLY" ? "ano" : "mês"}</p>
+                  <p className="flex flex-wrap items-center gap-2">
+                    {p.name} · {brl(p.priceCents)}/{p.interval === "YEARLY" ? "ano" : "mês"}
+                    <Badge tone={p.active ? "cyan" : "muted"}>{p.active ? "ativo" : "off"}</Badge>
+                  </p>
                   <p className="text-sm text-[#8b93a7]">{p.description || "Sem descrição"} · vigência de {p.durationDays} dias</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
+                    type="button"
                     variant="ghost"
+                    disabled={busy === p.id}
                     onClick={async () => {
                       const price = prompt("Novo valor em reais (ex: 79,00)", String((p.priceCents / 100).toFixed(2).replace(".", ",")));
                       if (!price) return;
-                      await fetch(`/api/admin/plans/${p.id}`, {
-                        method: "PATCH",
-                        headers: { "content-type": "application/json" },
-                        body: JSON.stringify({ name: p.name, priceCents: toCents(price), interval: p.interval, description: p.description, durationDays: p.durationDays }),
-                      });
-                      load();
+                      await patchPlan(p.id, { priceCents: toCents(price) }, `Preço de ${p.name} atualizado.`);
                     }}
                   >
                     Preço
                   </Button>
                   <Button
+                    type="button"
                     variant="ghost"
+                    disabled={busy === p.id}
                     onClick={async () => {
                       const days = prompt("Vigência em dias (ex: 30)", String(p.durationDays));
                       if (!days) return;
-                      await fetch(`/api/admin/plans/${p.id}`, {
-                        method: "PATCH",
-                        headers: { "content-type": "application/json" },
-                        body: JSON.stringify({ name: p.name, priceCents: p.priceCents, interval: p.interval, description: p.description, durationDays: Number(days) }),
-                      });
-                      load();
+                      await patchPlan(p.id, { durationDays: Number(days) }, `Vigência de ${p.name} atualizada.`);
                     }}
                   >
                     Vigência
                   </Button>
-                  <Button variant="ghost" onClick={() => fetch(`/api/admin/plans/${p.id}`, { method: "DELETE" }).then(load)}>
-                    Desativar
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={busy === p.id}
+                    onClick={() => patchPlan(p.id, { active: !p.active }, p.active ? `${p.name} desativado.` : `${p.name} ativado.`)}
+                  >
+                    {p.active ? "Desativar" : "Ativar"}
+                  </Button>
+                  <Button type="button" variant="danger" disabled={busy === p.id} onClick={() => removePlan(p)}>
+                    Excluir
                   </Button>
                 </div>
               </div>

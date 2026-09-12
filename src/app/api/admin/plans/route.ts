@@ -9,9 +9,16 @@ import { defaultDuration } from "@/lib/access";
 export async function GET() {
   const ctx = await apiUser();
   if (!ctx || ctx.user.role !== "ADMIN") return jsonError("Acesso negado.", 403);
-  const plans = await prisma.plan.findMany({ orderBy: { sortOrder: "asc" } });
+  const plans = await prisma.plan.findMany({
+    orderBy: { sortOrder: "asc" },
+    include: { _count: { select: { barbers: true } } },
+  });
   return NextResponse.json({
-    plans: plans.map((p) => ({ ...p, features: parseFeatures(p.features) })),
+    plans: plans.map((p) => ({
+      ...p,
+      units: p._count.barbers,
+      features: parseFeatures(p.features),
+    })),
   });
 }
 
