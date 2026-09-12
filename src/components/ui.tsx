@@ -86,3 +86,8 @@ export function Badge({ children, tone = "gold" }: { children: React.ReactNode; 
     </span>
   );
 }
+
+export function OpNotice({ text, ok = true }: { text: string; ok?: boolean }) {
+  if (!text) return null;
+  return <p className={cn("text-sm", ok ? "text-cyan" : "text-[#ff5d73]")}>{text}</p>;
+}

@@ -124,10 +124,11 @@ export function ShopBooker({ slug, initialQr, loggedIn = false }: { slug: string
   return (
     <div className="grid gap-4 lg:grid-cols-[1.2fr_320px]">
       <Card>
-        <p className="text-xs uppercase tracking-[0.28em] text-gold">{shop.city}</p>
-        <h1 className="mt-2 text-4xl">{shop.shopName}</h1>
-        <p className="mt-2 text-[#8b93a7]">{shop.barberName} · {shop.address}</p>
-        <p className="mt-4">{shop.bio}</p>
+        <h1 className="text-4xl">{shop.shopName}</h1>
+        {shop.city ? <p className="mt-2 text-xs uppercase tracking-[0.28em] text-gold">{shop.city}</p> : null}
+        {shop.barberName ? <p className="mt-2 text-[#8b93a7]">{shop.barberName}</p> : null}
+        {shop.address ? <p className="mt-1 text-[#8b93a7]">{shop.address}</p> : null}
+        {shop.bio ? <p className="mt-4">{shop.bio}</p> : null}
         <div className="mt-6 grid gap-2">
           {shop.services.map((s) => (
             <button

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Card, Field, inputClass } from "@/components/ui";
+import { Button, Card, Field, OpNotice, inputClass } from "@/components/ui";
 
 export default function AdminPagamentosPage() {
   const [form, setForm] = useState({
@@ -11,6 +11,7 @@ export default function AdminPagamentosPage() {
     mpAccessToken: "",
   });
   const [msg, setMsg] = useState("");
+  const [ok, setOk] = useState(true);
 
   useEffect(() => {
     fetch("/api/admin/billing")
@@ -35,7 +36,8 @@ export default function AdminPagamentosPage() {
             body: JSON.stringify(form),
           });
           const data = await res.json();
-          setMsg(res.ok ? "Credenciais da plataforma salvas." : data.error);
+          setOk(res.ok);
+          setMsg(res.ok ? "Credenciais da plataforma salvas." : data.error || "Não foi possível salvar.");
         }}
       >
         <Field label="Tipo da chave PIX">
@@ -56,7 +58,7 @@ export default function AdminPagamentosPage() {
         <Field label="Mercado Pago Access Token">
           <input className={inputClass()} value={form.mpAccessToken} onChange={(e) => setForm({ ...form, mpAccessToken: e.target.value })} placeholder="APP_USR-..." />
         </Field>
-        {msg && <p className="text-sm text-cyan">{msg}</p>}
+        <OpNotice ok={ok} text={msg} />
         <Button>Salvar caixa da plataforma</Button>
       </form>
     </Card>

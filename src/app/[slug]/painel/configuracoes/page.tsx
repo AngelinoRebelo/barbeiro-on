@@ -2,8 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card, Field, inputClass } from "@/components/ui";
+import { Button, Card, Field, OpNotice, inputClass } from "@/components/ui";
 import { brandUrl } from "@/lib/brand";
+
+type Notice = { ok: boolean; text: string };
+
+function notice(ok: boolean, text: string): Notice {
+  return { ok, text };
+}
 
 export default function ConfigPage() {
   const router = useRouter();
@@ -22,7 +28,11 @@ export default function ConfigPage() {
   });
   const [brandAt, setBrandAt] = useState<string | null>(null);
   const [brandBusy, setBrandBusy] = useState(false);
-  const [msg, setMsg] = useState("");
+  const [shopBusy, setShopBusy] = useState(false);
+  const [payBusy, setPayBusy] = useState(false);
+  const [brandMsg, setBrandMsg] = useState<Notice>({ ok: true, text: "" });
+  const [shopMsg, setShopMsg] = useState<Notice>({ ok: true, text: "" });
+  const [payMsg, setPayMsg] = useState<Notice>({ ok: true, text: "" });
 
   useEffect(() => {
     fetch("/api/barber/settings")
@@ -39,33 +49,33 @@ export default function ConfigPage() {
 
   async function uploadBrand(file: File) {
     setBrandBusy(true);
-    setMsg("");
+    setBrandMsg(notice(true, ""));
     const body = new FormData();
     body.append("image", file);
     const res = await fetch("/api/barber/brand", { method: "POST", body });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     setBrandBusy(false);
     if (!res.ok) {
-      setMsg(data.error || "Não foi possível enviar a imagem.");
+      setBrandMsg(notice(false, data.error || "Não foi possível enviar a imagem."));
       return;
     }
     setBrandAt(data.brandAt);
-    setMsg("Marca atualizada. A imagem vale como logo e fundo da unidade.");
+    setBrandMsg(notice(true, "Imagem salva."));
     router.refresh();
   }
 
   async function removeBrand() {
     setBrandBusy(true);
-    setMsg("");
+    setBrandMsg(notice(true, ""));
     const res = await fetch("/api/barber/brand", { method: "DELETE" });
     const data = await res.json().catch(() => ({}));
     setBrandBusy(false);
     if (!res.ok) {
-      setMsg(data.error || "Não foi possível remover a imagem.");
+      setBrandMsg(notice(false, data.error || "Não foi possível remover a imagem."));
       return;
     }
     setBrandAt(null);
-    setMsg("Marca removida. A unidade voltou ao visual padrão.");
+    setBrandMsg(notice(true, "Imagem removida."));
     router.refresh();
   }
 
@@ -105,7 +115,9 @@ export default function ConfigPage() {
             )}
           </div>
         </div>
-        {msg && <p className="mt-4 text-sm text-cyan">{msg}</p>}
+        <div className="mt-4">
+          <OpNotice ok={brandMsg.ok} text={brandMsg.text} />
+        </div>
       </Card>
       <Card>
         <h2 className="mb-4">Unidade</h2>
@@ -113,13 +125,16 @@ export default function ConfigPage() {
           className="space-y-3"
           onSubmit={async (e) => {
             e.preventDefault();
+            setShopBusy(true);
+            setShopMsg(notice(true, ""));
             const res = await fetch("/api/barber/settings", {
               method: "PATCH",
               headers: { "content-type": "application/json" },
               body: JSON.stringify(form),
             });
-            const data = await res.json();
-            setMsg(res.ok ? "Unidade atualizada." : data.error);
+            const data = await res.json().catch(() => ({}));
+            setShopBusy(false);
+            setShopMsg(notice(res.ok, res.ok ? "Unidade salva." : data.error || "Não foi possível salvar a unidade."));
           }}
         >
           <Field label="Nome da barbearia"><input className={inputClass()} value={form.shopName} onChange={(e) => setForm({ ...form, shopName: e.target.value })} /></Field>
@@ -130,7 +145,8 @@ export default function ConfigPage() {
             <Field label="Abre"><input className={inputClass()} type="time" value={form.openTime} onChange={(e) => setForm({ ...form, openTime: e.target.value })} /></Field>
             <Field label="Fecha"><input className={inputClass()} type="time" value={form.closeTime} onChange={(e) => setForm({ ...form, closeTime: e.target.value })} /></Field>
           </div>
-          <Button>Salvar unidade</Button>
+          <Button disabled={shopBusy}>{shopBusy ? "Salvando..." : "Salvar unidade"}</Button>
+          <OpNotice ok={shopMsg.ok} text={shopMsg.text} />
         </form>
       </Card>
       <Card>
@@ -142,6 +158,8 @@ export default function ConfigPage() {
           className="space-y-3"
           onSubmit={async (e) => {
             e.preventDefault();
+            setPayBusy(true);
+            setPayMsg(notice(true, ""));
             const res = await fetch("/api/barber/settings", {
               method: "PATCH",
               headers: { "content-type": "application/json" },
@@ -154,8 +172,9 @@ export default function ConfigPage() {
                 },
               }),
             });
-            const data = await res.json();
-            setMsg(res.ok ? "Pagamentos salvos." : data.error);
+            const data = await res.json().catch(() => ({}));
+            setPayBusy(false);
+            setPayMsg(notice(res.ok, res.ok ? "Pagamentos salvos." : data.error || "Não foi possível salvar os pagamentos."));
           }}
         >
           <Field label="Tipo da chave PIX">
@@ -170,7 +189,8 @@ export default function ConfigPage() {
           <Field label="Chave PIX"><input className={inputClass()} value={form.pixKey} onChange={(e) => setForm({ ...form, pixKey: e.target.value })} /></Field>
           <Field label="Mercado Pago Public Key"><input className={inputClass()} value={form.mpPublicKey} onChange={(e) => setForm({ ...form, mpPublicKey: e.target.value })} /></Field>
           <Field label="Mercado Pago Access Token"><input className={inputClass()} value={form.mpAccessToken} onChange={(e) => setForm({ ...form, mpAccessToken: e.target.value })} placeholder="APP_USR-..." /></Field>
-          <Button variant="cyan">Salvar pagamentos</Button>
+          <Button variant="cyan" disabled={payBusy}>{payBusy ? "Salvando..." : "Salvar pagamentos"}</Button>
+          <OpNotice ok={payMsg.ok} text={payMsg.text} />
         </form>
       </Card>
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Card, Field, inputClass, Badge } from "@/components/ui";
+import { Button, Card, Field, inputClass, Badge, OpNotice } from "@/components/ui";
 import { brl, CATEGORY_LABEL } from "@/lib/utils";
 
 type Service = {
@@ -16,6 +16,8 @@ type Service = {
 export default function ServicosPage() {
   const [items, setItems] = useState<Service[]>([]);
   const [form, setForm] = useState({ name: "", category: "HAIR", durationMin: 30, price: "45,00" });
+  const [msg, setMsg] = useState("");
+  const [ok, setOk] = useState(true);
 
   async function load() {
     const res = await fetch("/api/barber/services");
@@ -31,6 +33,9 @@ export default function ServicosPage() {
     <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
       <Card>
         <h2 className="mb-4">Catálogo</h2>
+        <div className="mb-3">
+          <OpNotice ok={ok} text={msg} />
+        </div>
         <div className="grid gap-2">
           {items.map((s) => (
             <div key={s.id} className="flex items-center justify-between rounded-2xl border border-white/5 px-4 py-3">
@@ -40,7 +45,21 @@ export default function ServicosPage() {
               </div>
               <div className="flex gap-2">
                 <Badge tone={s.active ? "cyan" : "muted"}>{s.active ? "ativo" : "off"}</Badge>
-                <Button variant="ghost" onClick={() => fetch(`/api/barber/services/${s.id}`, { method: "DELETE" }).then(load)}>
+                <Button
+                  variant="ghost"
+                  onClick={async () => {
+                    const res = await fetch(`/api/barber/services/${s.id}`, { method: "DELETE" });
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok) {
+                      setOk(false);
+                      setMsg(data.error || "Não foi possível desativar.");
+                      return;
+                    }
+                    setOk(true);
+                    setMsg("Serviço desativado.");
+                    load();
+                  }}
+                >
                   Desativar
                 </Button>
               </div>
@@ -54,7 +73,7 @@ export default function ServicosPage() {
           className="space-y-3"
           onSubmit={async (e) => {
             e.preventDefault();
-            await fetch("/api/barber/services", {
+            const res = await fetch("/api/barber/services", {
               method: "POST",
               headers: { "content-type": "application/json" },
               body: JSON.stringify({
@@ -64,6 +83,14 @@ export default function ServicosPage() {
                 priceCents: toCents(form.price),
               }),
             });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+              setOk(false);
+              setMsg(data.error || "Não foi possível adicionar.");
+              return;
+            }
+            setOk(true);
+            setMsg("Serviço adicionado.");
             setForm({ name: "", category: "HAIR", durationMin: 30, price: "45,00" });
             load();
           }}
@@ -83,6 +110,7 @@ export default function ServicosPage() {
           <Field label="Preço (R$)">
             <input className={inputClass()} value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
           </Field>
+          <OpNotice ok={ok} text={msg} />
           <Button className="w-full">Adicionar</Button>
         </form>
       </Card>

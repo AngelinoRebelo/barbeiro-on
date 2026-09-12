@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Card, Field, inputClass } from "@/components/ui";
+import { Button, Card, Field, OpNotice, inputClass } from "@/components/ui";
 
 type Client = { id: string; name: string; phone: string; email: string; notes: string };
 
@@ -9,6 +9,7 @@ export default function ClientesPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [form, setForm] = useState({ name: "", phone: "", email: "", notes: "" });
   const [msg, setMsg] = useState("");
+  const [ok, setOk] = useState(true);
 
   async function load() {
     const res = await fetch("/api/barber/clients");
@@ -23,6 +24,9 @@ export default function ClientesPage() {
     <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
       <Card>
         <h2 className="mb-4">Base de clientes</h2>
+        <div className="mb-3">
+          <OpNotice ok={ok} text={msg} />
+        </div>
         <div className="grid gap-2">
           {clients.map((c) => (
             <div key={c.id} className="flex items-center justify-between rounded-2xl border border-white/5 px-4 py-3">
@@ -41,8 +45,14 @@ export default function ClientesPage() {
                     body: JSON.stringify({ password }),
                   });
                   const data = await res.json();
-                  if (!res.ok) setMsg(data.error || "Não foi possível excluir.");
-                  else load();
+                  if (!res.ok) {
+                    setOk(false);
+                    setMsg(data.error || "Não foi possível excluir.");
+                  } else {
+                    setOk(true);
+                    setMsg("Cliente excluído.");
+                    load();
+                  }
                 }}
               >
                 Remover
@@ -63,8 +73,12 @@ export default function ClientesPage() {
               body: JSON.stringify(form),
             });
             const data = await res.json();
-            if (!res.ok) setMsg(data.error);
-            else {
+            if (!res.ok) {
+              setOk(false);
+              setMsg(data.error || "Não foi possível salvar.");
+            } else {
+              setOk(true);
+              setMsg("Cliente salvo.");
               setForm({ name: "", phone: "", email: "", notes: "" });
               load();
             }
@@ -73,7 +87,7 @@ export default function ClientesPage() {
           <Field label="Nome"><input className={inputClass()} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></Field>
           <Field label="Telefone"><input className={inputClass()} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></Field>
           <Field label="E-mail"><input className={inputClass()} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
-          {msg && <p className="text-sm text-[#ff5d73]">{msg}</p>}
+          {msg && <OpNotice ok={ok} text={msg} />}
           <Button className="w-full">Salvar</Button>
         </form>
       </Card>
