@@ -132,6 +132,7 @@ model BarberProfile {
   subscriptionStatus SubscriptionStatus @default(PENDING)
   accessUntil        DateTime?
   features           Json               @default("{\"agenda\":true,\"clients\":true,\"services\":true,\"pix\":true,\"mercadopago\":true,\"publicShop\":true}")
+  brandAt            DateTime?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
@@ -141,6 +142,15 @@ model BarberProfile {
   appointments Appointment[]
   payments     Payment[]
   availability AvailabilitySlot[]
+  brand        ShopBrand?
+}
+
+model ShopBrand {
+  barberId  String        @id
+  barber    BarberProfile @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  mime      String
+  data      Bytes
+  updatedAt DateTime      @updatedAt
 }
 
 model Plan {

@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { brl, formatWhen } from "@/lib/utils";
-import { Card, Badge, Logo } from "@/components/ui";
+import { Card, Badge } from "@/components/ui";
 import { shopPath, isReservedSlug } from "@/lib/paths";
 import { credentialsForPayment } from "@/lib/payments";
 import { MpCheckout } from "@/components/mp-checkout-lazy";
+import { ShopBackdrop, ShopLogo } from "@/components/shop-brand";
 
 export default async function ShopPagarPage({
   params,
@@ -26,9 +27,9 @@ export default async function ShopPagarPage({
   const label = payment.kind === "SUBSCRIPTION" ? "Mensalidade da plataforma" : payment.appointment?.service.name;
 
   return (
-    <div className="grid-bg grid min-h-screen place-items-center px-4 py-10">
+    <ShopBackdrop slug={slug} brandAt={payment.barber.brandAt} contentClassName="grid place-items-center px-4 py-10">
       <Card className="w-full max-w-lg">
-        <Logo href={shopPath(slug)} />
+        <ShopLogo slug={slug} shopName={payment.barber.shopName} brandAt={payment.barber.brandAt} href={shopPath(slug)} />
         <h1 className="mt-6 text-2xl">Pagamento</h1>
         <p className="text-[#8b93a7]">{payment.barber.shopName} · {label}</p>
         <p className="mt-2 text-4xl text-gold">{brl(payment.amountCents)}</p>
@@ -52,6 +53,6 @@ export default async function ShopPagarPage({
           )}
         </div>
       </Card>
-    </div>
+    </ShopBackdrop>
   );
 }

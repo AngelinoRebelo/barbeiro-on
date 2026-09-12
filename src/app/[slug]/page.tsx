@@ -2,12 +2,13 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { qrDataUrl } from "@/lib/qr";
-import { Logo, Button } from "@/components/ui";
+import { Button } from "@/components/ui";
 import { ShopBooker } from "@/components/shop-booker";
 import { shopPath, shopUrl, isReservedSlug } from "@/lib/paths";
 import { getSession } from "@/lib/session";
 import { LogoutButton } from "@/components/logout-button";
 import { ShopAtmosphere } from "@/components/shop-atmosphere";
+import { ShopBackdrop, ShopLogo } from "@/components/shop-brand";
 
 export default async function ShopPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -24,10 +25,10 @@ export default async function ShopPage({ params }: { params: Promise<{ slug: str
   const barberHere = here && session?.role === "BARBER";
 
   return (
-    <div className="grid-bg relative min-h-screen">
-      <ShopAtmosphere />
+    <ShopBackdrop slug={slug} brandAt={shop.brandAt}>
+      {!shop.brandAt && <ShopAtmosphere />}
       <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-        <Logo href={shopPath(slug)} />
+        <ShopLogo slug={slug} shopName={shop.shopName} brandAt={shop.brandAt} href={shopPath(slug)} />
         <div className="flex flex-wrap items-center gap-3">
           {clientHere ? (
             <>
@@ -72,6 +73,7 @@ export default async function ShopPage({ params }: { params: Promise<{ slug: str
         )}
         <ShopBooker slug={slug} initialQr={qr} loggedIn={Boolean(clientHere)} />
       </main>
-    </div>
+    </ShopBackdrop>
   );
 }
+

@@ -29,6 +29,7 @@ export async function GET() {
       mpPublicKey: p.mpPublicKey,
       mpAccessToken: maskSecret(mpAccess),
       mpConfigured: Boolean(mpAccess),
+      brandAt: p.brandAt?.toISOString() ?? null,
     },
   });
 }

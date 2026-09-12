@@ -35,6 +35,7 @@ export async function GET(req: Request, ctx: Ctx) {
     shop: {
       shopName: shop.shopName,
       slug: shop.slug,
+      brandAt: shop.brandAt?.toISOString() ?? null,
       bio: shop.bio,
       address: shop.address,
       city: shop.city,

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "./ui";
 import { LogoutButton } from "./logout-button";
+import { ShopBackdrop, ShopLogo } from "./shop-brand";
 import { cn } from "@/lib/utils";
 
 function navActive(pathname: string, href: string, items: { href: string }[]) {
@@ -19,6 +20,9 @@ export function AppShell({
   children,
   homeHref = "/",
   logoutHref = "/login",
+  brandSlug,
+  brandAt,
+  shopName,
 }: {
   title: string;
   subtitle: string;
@@ -26,14 +30,22 @@ export function AppShell({
   children: React.ReactNode;
   homeHref?: string;
   logoutHref?: string;
+  brandSlug?: string;
+  brandAt?: Date | string | null;
+  shopName?: string;
 }) {
   const pathname = usePathname();
+  const brand = brandSlug && shopName ? (
+    <ShopLogo slug={brandSlug} shopName={shopName} brandAt={brandAt} href={homeHref} />
+  ) : (
+    <Logo href={homeHref} />
+  );
 
   return (
-    <div className="grid-bg min-h-screen">
+    <ShopBackdrop slug={brandSlug || ""} brandAt={brandAt}>
       <div className="mx-auto grid min-h-screen max-w-7xl grid-cols-1 lg:grid-cols-[240px_1fr]">
         <aside className="border-b border-[rgba(212,175,55,0.14)] p-5 lg:border-b-0 lg:border-r">
-          <Logo href={homeHref} />
+          {brand}
           <p className="mt-8 text-[11px] uppercase tracking-[0.28em] text-[#8b93a7]">{subtitle}</p>
           <nav className="mt-4 grid gap-1">
             {nav.map((item) => {
@@ -64,6 +76,6 @@ export function AppShell({
           {children}
         </main>
       </div>
-    </div>
+    </ShopBackdrop>
   );
 }

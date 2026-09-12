@@ -32,14 +32,23 @@ export default async function PainelLayout({
     { href: `${base}/clientes`, label: "Clientes", show: features.clients },
     { href: `${base}/servicos`, label: "Serviços", show: features.services },
     { href: `${base}/financeiro`, label: "Financeiro", show: features.pix || features.mercadopago },
-    { href: `${base}/configuracoes`, label: "PIX e Mercado Pago", show: true },
+    { href: `${base}/configuracoes`, label: "Configurações", show: true },
     { href: `${base}/plano`, label: "Plano", show: true },
   ]
     .filter((i) => i.show)
     .map((i) => ({ href: i.href, label: i.label }));
 
   return (
-    <AppShell title={user.barberProfile.shopName} subtitle={`/${slug}`} nav={nav} homeHref={shopPath(slug)} logoutHref={shopPath(slug, "/login")}>
+    <AppShell
+      title={user.barberProfile.shopName}
+      subtitle={`/${slug}`}
+      nav={nav}
+      homeHref={shopPath(slug)}
+      logoutHref={shopPath(slug, "/login")}
+      brandSlug={slug}
+      brandAt={user.barberProfile.brandAt}
+      shopName={user.barberProfile.shopName}
+    >
       {children}
     </AppShell>
   );

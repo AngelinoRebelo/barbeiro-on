@@ -44,6 +44,28 @@ body {
   background-size: 48px 48px;
 }
 
+.shop-brand-bg {
+  background-color: #07080c;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+@media (min-width: 768px) {
+  .shop-brand-bg {
+    background-attachment: fixed;
+  }
+}
+
+.shop-brand-veil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(7, 8, 12, 0.46) 0%, rgba(7, 8, 12, 0.72) 52%, rgba(7, 8, 12, 0.88) 100%),
+    radial-gradient(1200px 500px at 10% -10%, rgba(212, 175, 55, 0.1), transparent 55%);
+}
+
 .glass {
   background: var(--card);
   border: 1px solid var(--line);
