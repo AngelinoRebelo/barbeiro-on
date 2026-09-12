@@ -28,12 +28,12 @@ const KNOWLEDGE: Knowledge[] = [
   {
     keywords: ["ajuda", "suporte", "como funciona", "duvida", "help", "o que e"],
     answer:
-      "O BARBEIRO ONLINE é o **sistema operacional da barbearia**. Cada unidade ganha um endereço **/nome-da-loja**. O barbeiro libera horários no **painel**, o cliente agenda ali, vê a **fila ao vivo** e paga com **PIX ou cartão Mercado Pago**. Admin da plataforma define planos, aprova unidades e o PIX da plataforma.",
+      "O BARBEIRO ONLINE é o **sistema operacional da barbearia**. Cada unidade ganha um endereço **/nome-da-loja**. O barbeiro libera horários no **painel**, o cliente agenda ali, vê a **fila ao vivo** e paga com **PIX ou cartão Mercado Pago**. Admin da plataforma define planos, valores por unidade e o PIX da plataforma.",
   },
   {
     keywords: ["ativar", "cadastrar barbearia", "contratar", "criar unidade", "abrir loja"],
     answer:
-      "Em **Contratar**, o barbeiro cria a unidade. Nasce o endereço **/nome-da-loja**. Depois o **admin aprova** a loja, o barbeiro escolhe o **plano**, cadastra **Public Key e Access Token** do Mercado Pago e libera horários na **Agenda**.",
+      "Em **Contratar**, o barbeiro cria a unidade. Nasce o endereço **/nome-da-loja** e a loja já entra ativa. Confirme o e-mail, cadastre **Public Key e Access Token** do Mercado Pago da unidade e libere horários na **Agenda**. A mensalidade usa o PIX da plataforma.",
   },
   {
     keywords: ["login", "entrar", "senha", "esqueci", "recuperar", "redefinir"],
@@ -78,7 +78,7 @@ const KNOWLEDGE: Knowledge[] = [
   {
     keywords: ["admin", "plataforma", "aprovar", "comando"],
     answer:
-      "O **admin** fica em **/admin**: usuários, planos, PIX da plataforma e aprovação de unidades. Ele define o teste padrão, ativa ou exclui planos e conecta o Mercado Pago que cobra a **assinatura** das barbearias.",
+      "O **admin** fica em **/admin**: usuários, planos, PIX da plataforma e suporte. Ele define o teste padrão, o valor de cobrança de cada barbeiro, ativa ou exclui planos e conecta o Mercado Pago que cobra a **assinatura** das barbearias. Se precisar, também pode revogar uma unidade.",
   },
   {
     keywords: ["obrigado", "valeu", "obg", "thanks"],

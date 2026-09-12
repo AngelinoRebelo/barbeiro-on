@@ -159,6 +159,7 @@ export async function POST(req: Request) {
         create: {
           shopName,
           slug,
+          approved: true,
           planId: plan.id,
           features,
           subscriptionStatus: trialDays > 0 || plan.priceCents === 0 ? "ACTIVE" : "PENDING",

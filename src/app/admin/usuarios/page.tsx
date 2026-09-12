@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge, Button, Card, inputClass } from "@/components/ui";
 import { FEATURE_LABELS, type FeatureFlags } from "@/lib/features";
-import { formatDay } from "@/lib/utils";
+import { brl, formatDay, toCents } from "@/lib/utils";
 
-type Plan = { id: string; name: string; durationDays: number };
+type Plan = { id: string; name: string; durationDays: number; priceCents: number };
 type Row = {
   id: string;
   name: string;
@@ -19,6 +19,8 @@ type Row = {
   features: FeatureFlags | null;
   planId: string | null;
   planName: string | null;
+  planPriceCents: number | null;
+  billingCents: number | null;
   accessUntil: string | null;
 };
 
@@ -35,6 +37,7 @@ export default function UsuariosPage() {
   const [me, setMe] = useState("");
   const [selectedPlan, setSelectedPlan] = useState<Record<string, string>>({});
   const [extraDays, setExtraDays] = useState<Record<string, string>>({});
+  const [billingDraft, setBillingDraft] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState("");
 
   async function load() {
@@ -65,9 +68,10 @@ export default function UsuariosPage() {
     setBusy("");
     if (!res.ok) {
       alert(data.error || "Não foi possível atualizar.");
-      return;
+      return false;
     }
     await load();
+    return true;
   }
 
   async function remove(id: string) {
@@ -99,6 +103,7 @@ export default function UsuariosPage() {
         {users.map((u) => {
           const left = daysLeft(u.accessUntil);
           const planValue = selectedPlan[u.id] || u.planId || plans[0]?.id || "";
+          const chargeCents = u.billingCents ?? u.planPriceCents ?? 0;
           return (
             <Card key={u.id} className="space-y-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -110,6 +115,7 @@ export default function UsuariosPage() {
                   {u.role === "BARBER" && (
                     <p className="mt-1 text-sm text-[#8b93a7]">
                       {u.planName ? `Plano ${u.planName}` : "Sem plano"}
+                      {` · cobrança ${brl(chargeCents)}${u.billingCents != null ? " (valor especial)" : ""}`}
                       {u.accessUntil
                         ? ` · vigente até ${formatDay(new Date(u.accessUntil))} (${left} dia${left === 1 ? "" : "s"})`
                         : " · sem vigência"}
@@ -196,6 +202,41 @@ export default function UsuariosPage() {
                   >
                     Acrescentar
                   </Button>
+                  <label className="grid gap-1 text-xs uppercase tracking-[0.18em] text-[#8b93a7]">
+                    Valor da cobrança
+                    <input
+                      className={inputClass() + " w-32"}
+                      inputMode="decimal"
+                      placeholder="ex: 1,00"
+                      value={billingDraft[u.id] ?? ""}
+                      onChange={(e) => setBillingDraft((s) => ({ ...s, [u.id]: e.target.value }))}
+                    />
+                  </label>
+                  <Button
+                    variant="ghost"
+                    disabled={busy === u.id || !(billingDraft[u.id] || "").trim()}
+                    onClick={async () => {
+                      const raw = (billingDraft[u.id] || "").trim();
+                      const parsed = Number(raw.replace(/\./g, "").replace(",", "."));
+                      if (!raw || !Number.isFinite(parsed) || parsed < 0) {
+                        alert("Informe o valor em reais, por exemplo 1,00.");
+                        return;
+                      }
+                      const ok = await patch(u.id, { action: "setBilling", billingCents: toCents(raw) });
+                      if (ok) setBillingDraft((s) => ({ ...s, [u.id]: "" }));
+                    }}
+                  >
+                    Salvar valor
+                  </Button>
+                  {u.billingCents != null && (
+                    <Button
+                      variant="ghost"
+                      disabled={busy === u.id}
+                      onClick={() => patch(u.id, { action: "setBilling", billingCents: null })}
+                    >
+                      Usar preço do plano
+                    </Button>
+                  )}
                 </div>
               )}
               {u.features && (

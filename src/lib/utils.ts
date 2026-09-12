@@ -20,6 +20,13 @@ export function brl(cents: number) {
   });
 }
 
+export function toCents(value: string) {
+  const normalized = String(value).trim().replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
+  const amount = Number(normalized);
+  if (!Number.isFinite(amount) || amount < 0) return 0;
+  return Math.round(amount * 100);
+}
+
 export function appUrl() {
   const env = (process.env.APP_URL || "").replace(/\/$/, "");
   if (env && !isLocalHost(env)) return env;

@@ -255,7 +255,7 @@ export function LandingHome() {
           </article>
           <div className="grid gap-4">
             {[
-              ["Admin", "Define planos, módulos, PIX da plataforma e aprova unidades."],
+              ["Admin", "Define planos, valor por unidade, PIX da plataforma e pode revogar lojas."],
               ["Barbeiro", "Opera agenda, clientes, serviços, financeiro e cobrança no corte."],
               ["Cliente", "Entra pelo link da loja, vê a vez dele e paga sem baixar nada."],
             ].map(([title, body], i) => (

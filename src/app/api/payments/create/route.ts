@@ -6,7 +6,7 @@ import { createCheckoutPreference } from "@/lib/mercadopago";
 import { randomToken } from "@/lib/utils";
 import { getPlatformSettings } from "@/lib/platform";
 import { shopPath } from "@/lib/paths";
-import { grantPaidPeriod } from "@/lib/subscription";
+import { grantPaidPeriod, subscriptionAmountCents, syncPendingSubscription } from "@/lib/subscription";
 import { credentialsForPayment, mpAccessOf } from "@/lib/payments";
 
 function checkoutPayload(opts: {
@@ -40,7 +40,9 @@ export async function POST(req: Request) {
       include: { plan: true },
     });
     if (!profile?.plan) return jsonError("Nenhum plano selecionado.");
-    if (profile.plan.priceCents === 0) {
+    const amountCents = subscriptionAmountCents(profile);
+    if (amountCents === 0) {
+      await syncPendingSubscription(profile.id, 0);
       await grantPaidPeriod(profile.id);
       return NextResponse.json({ ok: true, redirect: shopPath(profile.slug, "/painel") });
     }
@@ -49,35 +51,33 @@ export async function POST(req: Request) {
     if (!access || !platform.mpPublicKey.trim()) {
       return jsonError("O admin ainda não conectou o Mercado Pago da plataforma (Public Key e Access Token).");
     }
-    let payment = await prisma.payment.findFirst({
-      where: { barberId: profile.id, kind: "SUBSCRIPTION", status: "PENDING" },
-    });
+    let payment = await syncPendingSubscription(profile.id, amountCents);
     if (!payment) {
       payment = await prisma.payment.create({
         data: {
           barberId: profile.id,
           userId: ctx.user.id,
-          amountCents: profile.plan.priceCents,
+          amountCents,
           method: "MERCADOPAGO",
           kind: "SUBSCRIPTION",
         },
       });
     }
-  const payPath = shopPath(profile.slug, `/pagar/${payment.id}`);
-  let pref;
-  try {
-    pref = await createCheckoutPreference({
-      accessToken: access,
-      paymentId: payment.id,
-      title: `Plano ${profile.plan.name} · BARBEIRO ON`,
-      amountCents: payment.amountCents,
-      payerEmail: ctx.user.email,
-      backPath: payPath,
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Falha ao abrir o Mercado Pago da plataforma.";
-    return jsonError(message, 502);
-  }
+    const payPath = shopPath(profile.slug, `/pagar/${payment.id}`);
+    let pref;
+    try {
+      pref = await createCheckoutPreference({
+        accessToken: access,
+        paymentId: payment.id,
+        title: `Plano ${profile.plan.name} · BARBEIRO ON`,
+        amountCents: payment.amountCents,
+        payerEmail: ctx.user.email,
+        backPath: payPath,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Falha ao abrir o Mercado Pago da plataforma.";
+      return jsonError(message, 502);
+    }
     await prisma.payment.update({
       where: { id: payment.id },
       data: { mpPreferenceId: pref.id, mpInitPoint: pref.initPoint, method: "MERCADOPAGO" },

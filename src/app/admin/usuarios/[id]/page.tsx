@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { Card, Badge } from "@/components/ui";
 import { parseFeatures, FEATURE_LABELS } from "@/lib/features";
-import { formatWhen, formatDay, statusLabel } from "@/lib/utils";
+import { formatWhen, formatDay, statusLabel, brl } from "@/lib/utils";
 
 export default async function UserDetail({ params }: { params: Promise<{ id: string }> }) {
   await requireAdmin();
@@ -30,6 +30,7 @@ export default async function UserDetail({ params }: { params: Promise<{ id: str
           <>
             <div><dt className="text-[#8b93a7]">Unidade</dt><dd>{user.barberProfile.shopName} · /{user.barberProfile.slug}</dd></div>
             <div><dt className="text-[#8b93a7]">Plano</dt><dd>{user.barberProfile.plan?.name || "sem plano"}{user.barberProfile.plan ? ` · ${user.barberProfile.plan.durationDays} dias` : ""}</dd></div>
+            <div><dt className="text-[#8b93a7]">Cobrança</dt><dd>{user.barberProfile.billingCents != null ? `${brl(user.barberProfile.billingCents)} (valor especial)` : user.barberProfile.plan ? `${brl(user.barberProfile.plan.priceCents)} (preço do plano)` : "sem valor"}</dd></div>
             <div><dt className="text-[#8b93a7]">Vigência</dt><dd>{user.barberProfile.accessUntil ? formatDay(user.barberProfile.accessUntil) : "sem acesso"}</dd></div>
             <div><dt className="text-[#8b93a7]">Clientes / agenda / serviços</dt><dd>{user.barberProfile._count.clients} / {user.barberProfile._count.appointments} / {user.barberProfile._count.services}</dd></div>
             <div><dt className="text-[#8b93a7]">PIX</dt><dd>{user.barberProfile.pixKey || "não cadastrado"}</dd></div>

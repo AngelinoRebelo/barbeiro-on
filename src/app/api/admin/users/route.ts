@@ -50,6 +50,8 @@ export async function GET(req: Request) {
       features: u.barberProfile ? parseFeatures(u.barberProfile.features) : null,
       planId: u.barberProfile?.planId || null,
       planName: u.barberProfile?.plan?.name || null,
+      planPriceCents: u.barberProfile?.plan?.priceCents ?? null,
+      billingCents: u.barberProfile?.billingCents ?? null,
       accessUntil: u.barberProfile?.accessUntil || null,
     })),
   });

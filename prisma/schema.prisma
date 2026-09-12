@@ -118,7 +118,7 @@ model BarberProfile {
   bio         String     @default("")
   address     String     @default("")
   city        String     @default("São Paulo")
-  approved    Boolean    @default(false)
+  approved    Boolean    @default(true)
   openTime    String     @default("09:00")
   closeTime   String     @default("20:00")
   workDays    Int[]      @default([1, 2, 3, 4, 5, 6])
@@ -128,6 +128,7 @@ model BarberProfile {
   mpAccessEnc        String             @default("")
   planId             String?
   plan               Plan?              @relation(fields: [planId], references: [id], onDelete: SetNull)
+  billingCents       Int?
   subscriptionStatus SubscriptionStatus @default(PENDING)
   accessUntil        DateTime?
   features           Json               @default("{\"agenda\":true,\"clients\":true,\"services\":true,\"pix\":true,\"mercadopago\":true,\"publicShop\":true}")

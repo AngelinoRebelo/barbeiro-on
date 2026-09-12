@@ -5,6 +5,7 @@ import { shopPath } from "@/lib/paths";
 import { PlanPay } from "@/components/plan-pay";
 import { daysLeft, hasAccess } from "@/lib/access";
 import { formatDay } from "@/lib/utils";
+import { subscriptionAmountCents, syncPendingSubscription } from "@/lib/subscription";
 
 export default async function PlanoPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -12,6 +13,8 @@ export default async function PlanoPage({ params }: { params: Promise<{ slug: st
   if (user.role !== "BARBER" || !user.barberProfile) redirect("/login");
   if (user.barberProfile.slug !== slug) redirect(shopPath(user.barberProfile.slug, "/painel/plano"));
   const plan = user.barberProfile.plan;
+  const priceCents = subscriptionAmountCents(user.barberProfile);
+  if (plan) await syncPendingSubscription(user.barberProfile.id, priceCents);
   const until = user.barberProfile.accessUntil;
   const open = hasAccess(until);
   const left = daysLeft(until);
@@ -34,10 +37,10 @@ export default async function PlanoPage({ params }: { params: Promise<{ slug: st
           </p>
         )}
       </Card>
-      {plan && plan.priceCents > 0 && (
+      {plan && priceCents > 0 && (
         <PlanPay
           planName={plan.name}
-          priceCents={plan.priceCents}
+          priceCents={priceCents}
           interval={plan.interval}
           durationDays={plan.durationDays}
         />

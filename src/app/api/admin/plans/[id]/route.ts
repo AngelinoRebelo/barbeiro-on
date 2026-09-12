@@ -4,6 +4,7 @@ import { apiUser, jsonError } from "@/lib/auth";
 import { planPatchSchema } from "@/lib/validators";
 import { DEFAULT_FEATURES, parseFeatures } from "@/lib/features";
 import { slugify } from "@/lib/utils";
+import { syncPendingSubscription } from "@/lib/subscription";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -23,6 +24,15 @@ export async function PATCH(req: Request, ctx: Ctx) {
     data.features = { ...DEFAULT_FEATURES, ...parseFeatures(current.features), ...parsed.data.features };
   }
   const plan = await prisma.plan.update({ where: { id }, data });
+  if (typeof parsed.data.priceCents === "number") {
+    const barbers = await prisma.barberProfile.findMany({
+      where: { planId: plan.id, billingCents: null },
+      select: { id: true },
+    });
+    for (const barber of barbers) {
+      await syncPendingSubscription(barber.id, plan.priceCents);
+    }
+  }
   return NextResponse.json({ plan });
 }
 

@@ -5,7 +5,7 @@ import { DEFAULT_FEATURES, parseFeatures, type FeatureFlags } from "@/lib/featur
 import { sendApprovedEmail, sendVerifyEmail } from "@/lib/brevo";
 import { randomToken } from "@/lib/utils";
 import { logAction } from "@/lib/barber";
-import { addAccessDays, assignPlan } from "@/lib/subscription";
+import { addAccessDays, assignPlan, subscriptionAmountCents, syncPendingSubscription } from "@/lib/subscription";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -76,6 +76,30 @@ export async function PATCH(req: Request, ctx: Ctx) {
     if (!updated) return jsonError("Unidade não encontrada.", 404);
     await logAction(auth.user.id, "admin.addDays", id, { days });
     return NextResponse.json({ ok: true, accessUntil: updated.accessUntil });
+  }
+
+  if (body.action === "setBilling") {
+    if (!user.barberProfile) return jsonError("Somente unidades recebem valor de cobrança.", 400);
+    let billingCents: number | null = null;
+    if (body.billingCents !== null && body.billingCents !== undefined && body.billingCents !== "") {
+      const value = Math.floor(Number(body.billingCents));
+      if (!Number.isFinite(value) || value < 0 || value > 10_000_000) {
+        return jsonError("Informe um valor entre R$ 0 e R$ 100.000,00.");
+      }
+      billingCents = value;
+    }
+    const updated = await prisma.barberProfile.update({
+      where: { id: user.barberProfile.id },
+      data: { billingCents },
+      include: { plan: true },
+    });
+    await syncPendingSubscription(updated.id, subscriptionAmountCents(updated));
+    await logAction(auth.user.id, "admin.setBilling", id, { billingCents });
+    return NextResponse.json({
+      ok: true,
+      billingCents: updated.billingCents,
+      chargeCents: subscriptionAmountCents(updated),
+    });
   }
 
   const data: { status?: "ACTIVE" | "SUSPENDED" | "PENDING_EMAIL" } = {};
