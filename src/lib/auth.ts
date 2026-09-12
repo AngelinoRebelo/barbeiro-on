@@ -64,7 +64,6 @@ export async function requireBarber(expectedSlug?: string) {
   if (ctx.user.role === "ADMIN") redirect("/admin");
   if (ctx.user.role !== "BARBER" || !ctx.user.barberProfile) redirect("/login");
   const profile = ctx.user.barberProfile;
-  if (ctx.session.slug !== profile.slug) await issueSession(ctx.user);
   if (expectedSlug && expectedSlug !== profile.slug) redirect(shopPath(profile.slug, "/painel"));
   if (!profile.approved) redirect(shopPath(profile.slug, "/painel/aguardando"));
   if (!hasAccess(profile.accessUntil)) redirect(shopPath(profile.slug, "/painel/plano"));
@@ -81,7 +80,6 @@ export async function requireClient(expectedSlug?: string) {
   if (ctx.user.role === "BARBER") redirect(redirectHome(ctx.user));
   const slug = ctx.user.shop?.slug;
   if (!slug) redirect("/login");
-  if (ctx.session.slug !== slug) await issueSession(ctx.user);
   if (expectedSlug && expectedSlug !== slug) redirect(shopPath(slug, "/portal"));
   return ctx;
 }
