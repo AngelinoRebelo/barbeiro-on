@@ -5,7 +5,8 @@ import { DEFAULT_FEATURES, parseFeatures, type FeatureFlags } from "@/lib/featur
 import { sendApprovedEmail, sendVerifyEmail } from "@/lib/brevo";
 import { randomToken } from "@/lib/utils";
 import { logAction } from "@/lib/barber";
-import { addAccessDays, assignPlan, subscriptionAmountCents, syncPendingSubscription } from "@/lib/subscription";
+import { addAccessDays, assignPlan, lastPaidSubscription, subscriptionAmountCents, syncPendingSubscription } from "@/lib/subscription";
+import { addDays } from "@/lib/access";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -76,6 +77,31 @@ export async function PATCH(req: Request, ctx: Ctx) {
     if (!updated) return jsonError("Unidade não encontrada.", 404);
     await logAction(auth.user.id, "admin.addDays", id, { days });
     return NextResponse.json({ ok: true, accessUntil: updated.accessUntil });
+  }
+
+  if (body.action === "setTrialDays") {
+    if (!user.barberProfile) return jsonError("Somente unidades recebem período de teste.", 400);
+    const days = Math.floor(Number(body.days));
+    if (!Number.isFinite(days) || days < 0 || days > 3650) return jsonError("Informe entre 0 e 3650 dias de teste.");
+    const last = await lastPaidSubscription(user.barberProfile.id);
+    const trialUntil = days > 0 ? addDays(new Date(), days) : null;
+    let accessUntil = user.barberProfile.accessUntil;
+    if (days > 0) {
+      accessUntil =
+        accessUntil && accessUntil.getTime() > trialUntil!.getTime() ? accessUntil : trialUntil;
+    } else if (!last) {
+      accessUntil = new Date();
+    }
+    const updated = await prisma.barberProfile.update({
+      where: { id: user.barberProfile.id },
+      data: {
+        trialUntil,
+        accessUntil,
+        subscriptionStatus: days > 0 || Boolean(last) ? "ACTIVE" : "PENDING",
+      },
+    });
+    await logAction(auth.user.id, "admin.setTrialDays", id, { days });
+    return NextResponse.json({ ok: true, trialUntil: updated.trialUntil, accessUntil: updated.accessUntil });
   }
 
   if (body.action === "setBilling") {

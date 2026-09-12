@@ -4,6 +4,6 @@ export async function getPlatformSettings() {
   return prisma.platformSettings.upsert({
     where: { id: "platform" },
     update: {},
-    create: { id: "platform" },
+    create: { id: "platform", trialDays: 15 },
   });
 }

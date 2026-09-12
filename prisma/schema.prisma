@@ -131,6 +131,7 @@ model BarberProfile {
   billingCents       Int?
   subscriptionStatus SubscriptionStatus @default(PENDING)
   accessUntil        DateTime?
+  trialUntil         DateTime?
   features           Json               @default("{\"agenda\":true,\"clients\":true,\"services\":true,\"pix\":true,\"mercadopago\":true,\"publicShop\":true}")
   brandAt            DateTime?
   createdAt          DateTime           @default(now())
@@ -175,7 +176,7 @@ model PlatformSettings {
   pixKeyType  PixKeyType @default(RANDOM)
   mpPublicKey String     @default("")
   mpAccessEnc String     @default("")
-  trialDays   Int        @default(30)
+  trialDays   Int        @default(15)
   updatedAt   DateTime   @updatedAt
 }
 

@@ -61,7 +61,7 @@ async function main() {
   await prisma.platformSettings.upsert({
     where: { id: "platform" },
     update: {},
-    create: { id: "platform" },
+    create: { id: "platform", trialDays: 15 },
   });
 
   for (const plan of PLANS) {

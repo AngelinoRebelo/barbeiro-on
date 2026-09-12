@@ -83,7 +83,7 @@ export function LoginForm({ shopSlug }: { shopSlug?: string }) {
 
 export function BarberRegisterForm() {
   const [plans, setPlans] = useState<Plan[]>([]);
-  const [trialDays, setTrialDays] = useState(30);
+  const [trialDays, setTrialDays] = useState(15);
   const [form, setForm] = useState({
     name: "",
     email: "",

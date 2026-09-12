@@ -18,7 +18,7 @@ type Plan = {
 
 export default function PlanosAdminPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
-  const [trialDays, setTrialDays] = useState("30");
+  const [trialDays, setTrialDays] = useState("15");
   const [form, setForm] = useState({ name: "", description: "", price: "99,00", interval: "MONTHLY", durationDays: "30" });
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState("");

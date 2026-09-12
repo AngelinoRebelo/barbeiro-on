@@ -3,7 +3,7 @@ import { Card } from "@/components/ui";
 import { redirect } from "next/navigation";
 import { shopPath } from "@/lib/paths";
 import { PlanPay } from "@/components/plan-pay";
-import { canRenewPlan, daysLeft, hasAccess, renewOpensAt } from "@/lib/access";
+import { canRenewPlan, daysLeft, hasAccess, isOnTrial, renewOpensAt } from "@/lib/access";
 import { brl, formatDay, formatWhen } from "@/lib/utils";
 import { closePendingSubscriptions, lastPaidSubscription, subscriptionAmountCents, syncPendingSubscription } from "@/lib/subscription";
 
@@ -22,11 +22,19 @@ export default async function PlanoPage({ params }: { params: Promise<{ slug: st
   if (plan && !canPay) await closePendingSubscriptions(user.barberProfile.id);
   if (plan && canPay) await syncPendingSubscription(user.barberProfile.id, priceCents);
   const last = await lastPaidSubscription(user.barberProfile.id);
+  const trial = isOnTrial(user.barberProfile.trialUntil);
+  const trialLeft = daysLeft(user.barberProfile.trialUntil);
 
   return (
     <div className="space-y-4">
       <Card>
-        <h2 className="text-2xl">{open ? "Plano ativo" : "Acesso encerrado"}</h2>
+        <h2 className="text-2xl">{trial ? "Período de teste" : open ? "Plano ativo" : "Acesso encerrado"}</h2>
+        {trial && (
+          <p className="mt-3 rounded-2xl border border-gold/35 bg-[rgba(212,175,55,0.12)] px-4 py-3 text-sm text-gold">
+            Conta gratuita em período de teste
+            {trialLeft === 1 ? " · resta 1 dia." : ` · restam ${trialLeft} dias.`}
+          </p>
+        )}
         <p className="mt-3 text-[#8b93a7]">
           {plan?.name || "Plano"} para {user.barberProfile.shopName}.
           {until

@@ -98,5 +98,9 @@ export async function grantPaidPeriod(barberId: string) {
   });
   if (!profile) return null;
   const days = profile.plan?.durationDays ?? 30;
-  return addAccessDays(barberId, days);
+  const accessUntil = extendAccess(profile.accessUntil, days);
+  return prisma.barberProfile.update({
+    where: { id: barberId },
+    data: { accessUntil, trialUntil: null, subscriptionStatus: "ACTIVE" },
+  });
 }

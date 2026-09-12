@@ -31,3 +31,11 @@ export function canRenewPlan(until: Date | null | undefined, now = new Date()) {
 export function defaultDuration(interval: string) {
   return interval === "YEARLY" ? 365 : 30;
 }
+
+export function newAccountTrialDays(configured?: number | null) {
+  return configured && configured > 0 ? configured : 15;
+}
+
+export function isOnTrial(trialUntil: Date | null | undefined, now = new Date()) {
+  return Boolean(trialUntil && trialUntil.getTime() > now.getTime());
+}

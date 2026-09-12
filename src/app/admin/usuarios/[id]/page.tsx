@@ -4,13 +4,17 @@ import { requireAdmin } from "@/lib/auth";
 import { Card, Badge } from "@/components/ui";
 import { parseFeatures, FEATURE_LABELS } from "@/lib/features";
 import { formatWhen, formatDay, statusLabel, brl } from "@/lib/utils";
+import { daysLeft, isOnTrial } from "@/lib/access";
 
 export default async function UserDetail({ params }: { params: Promise<{ id: string }> }) {
   await requireAdmin();
   const { id } = await params;
   const user = await prisma.user.findUnique({
     where: { id },
-    include: { barberProfile: { include: { plan: true, _count: { select: { clients: true, appointments: true, services: true } } } } },
+    include: {
+      shop: true,
+      barberProfile: { include: { plan: true, _count: { select: { clients: true, appointments: true, services: true } } } },
+    },
   });
   if (!user) notFound();
   const features = user.barberProfile ? parseFeatures(user.barberProfile.features) : null;
@@ -22,6 +26,7 @@ export default async function UserDetail({ params }: { params: Promise<{ id: str
       <div className="mt-4 flex gap-2">
         <Badge>{statusLabel(user.role)}</Badge>
         <Badge tone={user.status === "ACTIVE" ? "cyan" : "muted"}>{statusLabel(user.status)}</Badge>
+        {user.barberProfile && isOnTrial(user.barberProfile.trialUntil) && <Badge>teste grátis</Badge>}
       </div>
       <dl className="mt-6 grid gap-3 text-sm md:grid-cols-2">
         <div><dt className="text-[#8b93a7]">Criado</dt><dd>{formatWhen(user.createdAt)}</dd></div>
@@ -32,10 +37,21 @@ export default async function UserDetail({ params }: { params: Promise<{ id: str
             <div><dt className="text-[#8b93a7]">Plano</dt><dd>{user.barberProfile.plan?.name || "sem plano"}{user.barberProfile.plan ? ` · ${user.barberProfile.plan.durationDays} dias` : ""}</dd></div>
             <div><dt className="text-[#8b93a7]">Cobrança</dt><dd>{user.barberProfile.billingCents != null ? `${brl(user.barberProfile.billingCents)} (valor especial)` : user.barberProfile.plan ? `${brl(user.barberProfile.plan.priceCents)} (preço do plano)` : "sem valor"}</dd></div>
             <div><dt className="text-[#8b93a7]">Vigência</dt><dd>{user.barberProfile.accessUntil ? formatDay(user.barberProfile.accessUntil) : "sem acesso"}</dd></div>
+            <div>
+              <dt className="text-[#8b93a7]">Período de teste</dt>
+              <dd>
+                {isOnTrial(user.barberProfile.trialUntil)
+                  ? `conta gratuita · restam ${daysLeft(user.barberProfile.trialUntil)} dia${daysLeft(user.barberProfile.trialUntil) === 1 ? "" : "s"}`
+                  : "fora do teste"}
+              </dd>
+            </div>
             <div><dt className="text-[#8b93a7]">Clientes / agenda / serviços</dt><dd>{user.barberProfile._count.clients} / {user.barberProfile._count.appointments} / {user.barberProfile._count.services}</dd></div>
             <div><dt className="text-[#8b93a7]">PIX</dt><dd>{user.barberProfile.pixKey || "não cadastrado"}</dd></div>
             <div><dt className="text-[#8b93a7]">Mercado Pago</dt><dd>{user.barberProfile.mpAccessEnc ? "conectado" : "pendente"}</dd></div>
           </>
+        )}
+        {user.shop && (
+          <div><dt className="text-[#8b93a7]">Barbearia</dt><dd>{user.shop.shopName} · /{user.shop.slug}</dd></div>
         )}
       </dl>
       {features && (
