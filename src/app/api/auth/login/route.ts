@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validators";
 import { verifyPassword } from "@/lib/password";
 import { issueSession, redirectHome } from "@/lib/auth";
-import { appUrl } from "@/lib/utils";
+import { publicOrigin } from "@/lib/utils";
 
 function safeNext(raw: string, shopSlug: string) {
   if (!raw.startsWith("/") || raw.startsWith("//")) return "";
@@ -36,7 +36,7 @@ async function credentialsFrom(req: Request) {
 function fail(form: boolean, req: Request, message: string, shopSlug: string, status = 401) {
   if (!form) return NextResponse.json({ error: message }, { status });
   const path = shopSlug ? `/${shopSlug}/login` : "/login";
-  const url = new URL(path, req.url);
+  const url = new URL(path, publicOrigin(req));
   url.searchParams.set("erro", message);
   return NextResponse.redirect(url, 303);
 }
@@ -85,7 +85,7 @@ export async function POST(req: Request) {
   const next = safeNext(input.next, user.barberProfile?.slug || user.shop?.slug || shopSlug);
   const dest = next || redirectHome(user);
   if (input.form) {
-    return NextResponse.redirect(new URL(dest, req.headers.get("origin") || appUrl()), 303);
+    return NextResponse.redirect(new URL(dest, publicOrigin(req)), 303);
   }
   return NextResponse.json({ ok: true, redirect: dest });
 }

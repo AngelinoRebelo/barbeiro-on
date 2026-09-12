@@ -21,7 +21,40 @@ export function brl(cents: number) {
 }
 
 export function appUrl() {
-  return (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  const env = (process.env.APP_URL || "").replace(/\/$/, "");
+  if (env && !isLocalHost(env)) return env;
+  const railway = (process.env.RAILWAY_PUBLIC_DOMAIN || process.env.RAILWAY_STATIC_URL || "")
+    .replace(/^https?:\/\//, "")
+    .replace(/\/$/, "");
+  if (railway && !isLocalHost(railway)) return `https://${railway}`;
+  return env || "http://localhost:3000";
+}
+
+function isLocalHost(value: string) {
+  const host = value.replace(/^https?:\/\//, "").split("/")[0].split(":")[0].toLowerCase();
+  return host === "localhost" || host === "127.0.0.1" || host === "0.0.0.0" || host === "::1";
+}
+
+export function publicOrigin(req: { url: string; headers: Headers }) {
+  const forwardedHost = (req.headers.get("x-forwarded-host") || "").split(",")[0].trim();
+  const forwardedProto = (req.headers.get("x-forwarded-proto") || "").split(",")[0].trim();
+  if (forwardedHost && !isLocalHost(forwardedHost)) {
+    return `${forwardedProto || "https"}://${forwardedHost}`;
+  }
+  const origin = (req.headers.get("origin") || "").replace(/\/$/, "");
+  if (origin && !isLocalHost(origin)) return origin;
+  const host = (req.headers.get("host") || "").split(",")[0].trim();
+  if (host && !isLocalHost(host)) {
+    const proto = forwardedProto || (host.includes("localhost") ? "http" : "https");
+    return `${proto}://${host}`;
+  }
+  try {
+    const url = new URL(req.url);
+    if (!isLocalHost(url.hostname)) return url.origin;
+  } catch {
+    /* ignore */
+  }
+  return appUrl();
 }
 
 export function randomToken(bytes = 32) {
