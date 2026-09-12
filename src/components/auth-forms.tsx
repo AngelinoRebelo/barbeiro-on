@@ -101,14 +101,36 @@ export function BarberRegisterForm() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
 
+  function applyCatalog(d: { plans?: Plan[]; trialDays?: number }) {
+    const next = d.plans || [];
+    setPlans(next);
+    if (typeof d.trialDays === "number") setTrialDays(d.trialDays);
+    setForm((f) => {
+      if (next.some((p) => p.id === f.planId)) return f;
+      return { ...f, planId: next[0]?.id || "" };
+    });
+  }
+
   useEffect(() => {
-    fetch("/api/plans")
-      .then((r) => r.json())
-      .then((d) => {
-        setPlans(d.plans || []);
-        if (typeof d.trialDays === "number") setTrialDays(d.trialDays);
-        if (d.plans?.[0]) setForm((f) => ({ ...f, planId: f.planId || d.plans[0].id }));
-      });
+    let cancelled = false;
+    async function load() {
+      const res = await fetch(`/api/plans?t=${Date.now()}`, { cache: "no-store" });
+      const d = await res.json().catch(() => ({}));
+      if (!cancelled) applyCatalog(d);
+    }
+    void load();
+    const live = new EventSource("/api/plans/live");
+    live.addEventListener("plans", () => {
+      void load();
+    });
+    const poll = window.setInterval(() => {
+      void load();
+    }, 2000);
+    return () => {
+      cancelled = true;
+      live.close();
+      window.clearInterval(poll);
+    };
   }, []);
 
   async function submit(e: React.FormEvent) {
@@ -141,6 +163,11 @@ export function BarberRegisterForm() {
       <div>
         <p className="mb-2 text-xs uppercase tracking-[0.22em] text-[#8b93a7]">Plano</p>
         <div className="grid gap-2">
+          {plans.length === 0 && (
+            <p className="rounded-2xl border border-white/10 px-4 py-3 text-sm text-[#8b93a7]">
+              Nenhum plano disponível no momento.
+            </p>
+          )}
           {plans.map((p) => (
             <button
               key={p.id}

@@ -5,6 +5,7 @@ import { planSchema } from "@/lib/validators";
 import { parseFeatures, DEFAULT_FEATURES } from "@/lib/features";
 import { slugify } from "@/lib/utils";
 import { defaultDuration } from "@/lib/access";
+import { notifyCatalogLive } from "@/lib/live";
 
 export async function GET() {
   const ctx = await apiUser();
@@ -41,5 +42,6 @@ export async function POST(req: Request) {
       features: { ...DEFAULT_FEATURES, ...parsed.data.features },
     },
   });
+  notifyCatalogLive();
   return NextResponse.json({ plan });
 }

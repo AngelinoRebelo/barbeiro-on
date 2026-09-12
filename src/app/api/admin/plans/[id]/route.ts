@@ -5,6 +5,7 @@ import { planPatchSchema } from "@/lib/validators";
 import { DEFAULT_FEATURES, parseFeatures } from "@/lib/features";
 import { slugify } from "@/lib/utils";
 import { syncPendingSubscription } from "@/lib/subscription";
+import { notifyCatalogLive } from "@/lib/live";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -33,6 +34,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
       await syncPendingSubscription(barber.id, plan.priceCents);
     }
   }
+  notifyCatalogLive();
   return NextResponse.json({ plan });
 }
 
@@ -46,5 +48,6 @@ export async function DELETE(_: Request, ctx: Ctx) {
   });
   if (!current) return jsonError("Plano não encontrado.", 404);
   await prisma.plan.delete({ where: { id } });
+  notifyCatalogLive();
   return NextResponse.json({ ok: true, detached: current._count.barbers });
 }

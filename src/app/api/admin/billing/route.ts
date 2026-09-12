@@ -4,6 +4,7 @@ import { apiUser, jsonError } from "@/lib/auth";
 import { getPlatformSettings } from "@/lib/platform";
 import { paymentSettingsSchema } from "@/lib/validators";
 import { encryptSecret, decryptSecret, maskSecret } from "@/lib/crypto";
+import { notifyCatalogLive } from "@/lib/live";
 
 export async function GET() {
   const ctx = await apiUser();
@@ -42,6 +43,7 @@ export async function PATCH(req: Request) {
       update: { trialDays },
       create: { id: "platform", trialDays },
     });
+    notifyCatalogLive();
     return NextResponse.json({ ok: true, trialDays });
   }
 
