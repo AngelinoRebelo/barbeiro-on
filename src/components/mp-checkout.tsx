@@ -36,17 +36,20 @@ export const MpCheckout = memo(function MpCheckout({
 
   useEffect(() => {
     if (paid) return;
-    const timer = setInterval(async () => {
+    let cancelled = false;
+    async function checkPaid() {
       const res = await fetch(`/api/payments/${paymentId}`);
       const data = await res.json().catch(() => ({}));
-      if (data.status === "PAID") {
-        setPaid(true);
-        onPaidRef.current?.();
-      } else if (data.mpPaymentId) {
-        setMpPaymentId((current) => current || data.mpPaymentId);
-      }
-    }, 4000);
-    return () => clearInterval(timer);
+      if (cancelled || data.status !== "PAID") return;
+      setPaid(true);
+      onPaidRef.current?.();
+    }
+    void checkPaid();
+    const timer = setInterval(checkPaid, 4000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
   }, [paymentId, paid]);
 
   const initialization = useMemo(
