@@ -7,6 +7,7 @@ import { ShopBooker } from "@/components/shop-booker";
 import { shopPath, shopUrl, isReservedSlug } from "@/lib/paths";
 import { getSession } from "@/lib/session";
 import { LogoutButton } from "@/components/logout-button";
+import { ShopAtmosphere } from "@/components/shop-atmosphere";
 
 export default async function ShopPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -23,8 +24,9 @@ export default async function ShopPage({ params }: { params: Promise<{ slug: str
   const barberHere = here && session?.role === "BARBER";
 
   return (
-    <div className="grid-bg min-h-screen">
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
+    <div className="grid-bg relative min-h-screen">
+      <ShopAtmosphere />
+      <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
         <Logo href={shopPath(slug)} />
         <div className="flex flex-wrap items-center gap-3">
           {clientHere ? (
@@ -57,7 +59,7 @@ export default async function ShopPage({ params }: { params: Promise<{ slug: str
           )}
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-6 pb-20">
+      <main className="relative z-10 mx-auto max-w-6xl px-6 pb-20">
         {!shop.approved && (
           <p className="mb-6 rounded-2xl border border-gold/30 px-4 py-3 text-sm text-gold">
             Unidade recém-criada. Cadastro de clientes já abre aqui; a agenda libera após o admin aprovar.

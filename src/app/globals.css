@@ -76,3 +76,120 @@ details.fold > summary .chev {
 details.fold[open] > summary .chev {
   transform: rotate(180deg);
 }
+
+.shop-atmosphere {
+  pointer-events: none;
+}
+
+.atm-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.atm-rail {
+  position: fixed;
+  top: 10%;
+  bottom: 10%;
+  width: 1px;
+  z-index: 0;
+  opacity: 0.7;
+}
+
+.atm-rail-left {
+  left: 22px;
+  background: linear-gradient(180deg, transparent, rgba(212, 175, 55, 0.55), transparent);
+  box-shadow: 0 0 18px rgba(212, 175, 55, 0.18);
+}
+
+.atm-rail-right {
+  right: 22px;
+  background: linear-gradient(180deg, transparent, rgba(62, 232, 200, 0.5), transparent);
+  box-shadow: 0 0 18px rgba(62, 232, 200, 0.16);
+}
+
+.atm-rail::before,
+.atm-rail::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  transform: translateX(-50%);
+}
+
+.atm-rail-left::before,
+.atm-rail-left::after {
+  background: #d4af37;
+  box-shadow: 0 0 12px #d4af37;
+}
+
+.atm-rail-right::before,
+.atm-rail-right::after {
+  background: #3ee8c8;
+  box-shadow: 0 0 12px #3ee8c8;
+}
+
+.atm-rail::before { top: 0; }
+.atm-rail::after {
+  top: 0;
+  animation: atm-travel 5.6s ease-in-out infinite alternate;
+}
+
+.atm-rail-right::after {
+  animation-direction: alternate-reverse;
+}
+
+@keyframes atm-travel {
+  0% { top: 0; }
+  100% { top: calc(100% - 7px); }
+}
+
+html.atm-aim {
+  cursor: crosshair;
+}
+
+.atm-label {
+  position: fixed;
+  z-index: 0;
+  font-family: var(--font-jb), ui-monospace, monospace;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.atm-label span {
+  display: block;
+  font-size: 10px;
+  color: #8b93a7;
+}
+
+.atm-label b {
+  display: block;
+  margin-top: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.atm-label-left {
+  left: 34px;
+  top: 18%;
+  color: #d4af37;
+}
+
+.atm-label-right {
+  right: 34px;
+  bottom: 18%;
+  color: #3ee8c8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atm-rail::after {
+    animation: none;
+    bottom: 0;
+    top: auto;
+  }
+}
