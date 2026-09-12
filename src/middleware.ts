@@ -58,7 +58,7 @@ export async function middleware(req: NextRequest) {
   if (maybeSlug && !isReservedSlug(maybeSlug) && nested === "painel") {
     if (!session) return NextResponse.redirect(loc(req, `/${maybeSlug}/login`));
     if (session.role === "ADMIN") return NextResponse.redirect(loc(req, "/admin"));
-    if (session.role !== "BARBER" || session.slug !== maybeSlug) {
+    if (session.role !== "BARBER") {
       return sendTo(req, homeOf(session), `/${maybeSlug}/login`) ?? NextResponse.redirect(loc(req, `/${maybeSlug}/login`));
     }
   }
@@ -66,7 +66,7 @@ export async function middleware(req: NextRequest) {
   if (maybeSlug && !isReservedSlug(maybeSlug) && nested === "portal") {
     if (!session) return NextResponse.redirect(loc(req, `/${maybeSlug}/login`));
     if (session.role === "ADMIN") return NextResponse.redirect(loc(req, "/admin"));
-    if (session.role !== "CLIENT" || session.slug !== maybeSlug) {
+    if (session.role !== "CLIENT") {
       return sendTo(req, homeOf(session), `/${maybeSlug}/login`) ?? NextResponse.redirect(loc(req, `/${maybeSlug}/login`));
     }
   }

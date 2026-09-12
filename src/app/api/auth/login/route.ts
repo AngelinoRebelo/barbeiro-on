@@ -69,9 +69,6 @@ export async function POST(req: Request) {
     if (user.role === "CLIENT" && user.shop?.slug !== shopSlug) {
       return fail(input.form, req, "Esta conta não pertence a esta barbearia.", shopSlug, 403);
     }
-    if (user.role === "BARBER" && user.barberProfile?.slug !== shopSlug) {
-      return fail(input.form, req, "Esta unidade não é a sua. Use o painel da sua barbearia.", shopSlug, 403);
-    }
     if (user.role === "ADMIN") {
       return fail(input.form, req, "Admin entra pela plataforma, não pela loja.", shopSlug, 403);
     }

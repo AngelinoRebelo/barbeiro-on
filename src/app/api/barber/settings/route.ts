@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { apiUser, jsonError } from "@/lib/auth";
 import { paymentSettingsSchema } from "@/lib/validators";
 import { encryptSecret, decryptSecret, maskSecret } from "@/lib/crypto";
-import { uniqueSlug } from "@/lib/barber";
 
 export async function GET() {
   const ctx = await apiUser();
@@ -43,7 +42,6 @@ export async function PATCH(req: Request) {
   const shopPatch: Record<string, unknown> = {};
   if (typeof body.shopName === "string" && body.shopName.trim().length >= 2) {
     shopPatch.shopName = body.shopName.trim();
-    if (body.shopName.trim() !== p.shopName) shopPatch.slug = await uniqueSlug(body.shopName.trim());
   }
   if (typeof body.bio === "string") shopPatch.bio = body.bio.slice(0, 400);
   if (typeof body.address === "string") shopPatch.address = body.address.slice(0, 160);

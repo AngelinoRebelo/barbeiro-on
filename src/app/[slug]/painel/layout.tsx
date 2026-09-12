@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { parseFeatures } from "@/lib/features";
 import { shopPath } from "@/lib/paths";
+import { issueSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,9 @@ export default async function PainelLayout({
     include: { barberProfile: true },
   });
   if (!user || user.role !== "BARBER" || !user.barberProfile) redirect("/login");
+  if (session.slug !== user.barberProfile.slug) {
+    await issueSession(user);
+  }
   if (user.barberProfile.slug !== slug) redirect(shopPath(user.barberProfile.slug, "/painel"));
   const features = parseFeatures(user.barberProfile.features);
   const base = shopPath(slug, "/painel");
