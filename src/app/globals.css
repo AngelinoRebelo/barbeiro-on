@@ -59,3 +59,20 @@ body {
 input, select, textarea {
   color: var(--text);
 }
+
+details.fold > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+details.fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+details.fold > summary .chev {
+  transition: transform 0.15s ease;
+}
+
+details.fold[open] > summary .chev {
+  transform: rotate(180deg);
+}

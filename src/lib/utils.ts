@@ -76,6 +76,46 @@ export function combineDateTimeSP(isoDate: string, time: string) {
   return new Date(`${isoDate}T${time}:00-03:00`);
 }
 
+export function monthRangeSP(year: number, month: number) {
+  const mm = String(month).padStart(2, "0");
+  const start = new Date(`${year}-${mm}-01T00:00:00-03:00`);
+  const next = month === 12 ? { y: year + 1, m: 1 } : { y: year, m: month + 1 };
+  const end = new Date(`${next.y}-${String(next.m).padStart(2, "0")}-01T00:00:00-03:00`);
+  return { start, end };
+}
+
+export function yearMonthSP(date = new Date()) {
+  const [year, month] = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+  })
+    .format(date)
+    .split("-")
+    .map(Number);
+  return { year, month };
+}
+
+export const MONTH_LABELS = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
+
+export const METHOD_LABEL: Record<string, string> = {
+  PIX: "PIX",
+  MERCADOPAGO: "Mercado Pago (cartão)",
+};
+
 export const CATEGORY_LABEL: Record<string, string> = {
   HAIR: "Cabelo",
   BEARD: "Barba",
