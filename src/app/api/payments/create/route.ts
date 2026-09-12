@@ -6,7 +6,8 @@ import { createCheckoutPreference } from "@/lib/mercadopago";
 import { randomToken } from "@/lib/utils";
 import { getPlatformSettings } from "@/lib/platform";
 import { shopPath } from "@/lib/paths";
-import { grantPaidPeriod, subscriptionAmountCents, syncPendingSubscription } from "@/lib/subscription";
+import { grantPaidPeriod, lastPaidSubscription, closePendingSubscriptions, subscriptionAmountCents, syncPendingSubscription } from "@/lib/subscription";
+import { canRenewPlan } from "@/lib/access";
 import { credentialsForPayment, mpAccessOf } from "@/lib/payments";
 
 function checkoutPayload(opts: {
@@ -41,6 +42,16 @@ export async function POST(req: Request) {
     });
     if (!profile?.plan) return jsonError("Nenhum plano selecionado.");
     const amountCents = subscriptionAmountCents(profile);
+    if (!canRenewPlan(profile.accessUntil)) {
+      await closePendingSubscriptions(profile.id);
+      const last = await lastPaidSubscription(profile.id);
+      return jsonError(
+        last?.paidAt
+          ? `O plano ainda está vigente. Nova cobrança só a partir de 10 dias antes do término. Último pagamento: ${new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short" }).format(last.paidAt)}.`
+          : "O plano ainda está vigente. Nova cobrança só a partir de 10 dias antes do término.",
+        409,
+      );
+    }
     if (amountCents === 0) {
       await syncPendingSubscription(profile.id, 0);
       await grantPaidPeriod(profile.id);

@@ -8,6 +8,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const nav = [
     { href: "/admin", label: "Visão geral" },
     { href: "/admin/usuarios", label: "Usuários" },
+    { href: "/admin/financeiro", label: "Financeiro" },
     { href: "/admin/planos", label: "Planos" },
     { href: "/admin/pagamentos", label: "PIX e Mercado Pago" },
     { href: "/admin/suporte", label: "Suporte" },

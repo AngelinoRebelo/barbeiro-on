@@ -16,6 +16,18 @@ export function hasAccess(until: Date | null | undefined, now = new Date()) {
   return Boolean(until && until.getTime() > now.getTime());
 }
 
+export const RENEW_WINDOW_DAYS = 10;
+
+export function renewOpensAt(until: Date | null | undefined) {
+  if (!until) return null;
+  return addDays(until, -RENEW_WINDOW_DAYS);
+}
+
+export function canRenewPlan(until: Date | null | undefined, now = new Date()) {
+  if (!hasAccess(until, now)) return true;
+  return daysLeft(until, now) <= RENEW_WINDOW_DAYS;
+}
+
 export function defaultDuration(interval: string) {
   return interval === "YEARLY" ? 365 : 30;
 }

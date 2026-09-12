@@ -3,9 +3,9 @@ import { Card } from "@/components/ui";
 import { redirect } from "next/navigation";
 import { shopPath } from "@/lib/paths";
 import { PlanPay } from "@/components/plan-pay";
-import { daysLeft, hasAccess } from "@/lib/access";
-import { formatDay } from "@/lib/utils";
-import { subscriptionAmountCents, syncPendingSubscription } from "@/lib/subscription";
+import { canRenewPlan, daysLeft, hasAccess, renewOpensAt } from "@/lib/access";
+import { brl, formatDay, formatWhen } from "@/lib/utils";
+import { closePendingSubscriptions, lastPaidSubscription, subscriptionAmountCents, syncPendingSubscription } from "@/lib/subscription";
 
 export default async function PlanoPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -14,10 +14,14 @@ export default async function PlanoPage({ params }: { params: Promise<{ slug: st
   if (user.barberProfile.slug !== slug) redirect(shopPath(user.barberProfile.slug, "/painel/plano"));
   const plan = user.barberProfile.plan;
   const priceCents = subscriptionAmountCents(user.barberProfile);
-  if (plan) await syncPendingSubscription(user.barberProfile.id, priceCents);
   const until = user.barberProfile.accessUntil;
   const open = hasAccess(until);
   const left = daysLeft(until);
+  const canPay = canRenewPlan(until);
+  const renewFrom = renewOpensAt(until);
+  if (plan && !canPay) await closePendingSubscriptions(user.barberProfile.id);
+  if (plan && canPay) await syncPendingSubscription(user.barberProfile.id, priceCents);
+  const last = await lastPaidSubscription(user.barberProfile.id);
 
   return (
     <div className="space-y-4">
@@ -36,6 +40,17 @@ export default async function PlanoPage({ params }: { params: Promise<{ slug: st
             Cada pagamento libera {plan.durationDays} dias de uso.
           </p>
         )}
+        {last && (
+          <p className="mt-4 rounded-2xl border border-cyan/25 bg-cyan/5 px-4 py-3 text-sm text-cyan">
+            Último pagamento: {brl(last.amountCents)} em {formatWhen(last.paidAt || last.createdAt)}
+            {last.method === "PIX" ? " · PIX" : " · Mercado Pago"}.
+          </p>
+        )}
+        {open && !canPay && renewFrom && (
+          <p className="mt-3 text-sm text-[#8b93a7]">
+            Nova cobrança só a partir de {formatDay(renewFrom)} (10 dias antes do término).
+          </p>
+        )}
       </Card>
       {plan && priceCents > 0 && (
         <PlanPay
@@ -43,6 +58,18 @@ export default async function PlanoPage({ params }: { params: Promise<{ slug: st
           priceCents={priceCents}
           interval={plan.interval}
           durationDays={plan.durationDays}
+          canPay={canPay}
+          renewFrom={renewFrom?.toISOString() ?? null}
+          lastPayment={
+            last
+              ? {
+                  amountCents: last.amountCents,
+                  paidAt: last.paidAt?.toISOString() ?? null,
+                  createdAt: last.createdAt.toISOString(),
+                  method: last.method,
+                }
+              : null
+          }
         />
       )}
     </div>

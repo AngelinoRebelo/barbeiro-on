@@ -18,6 +18,20 @@ const pendingMpReset = {
   pixTxid: null,
 };
 
+export async function lastPaidSubscription(barberId: string) {
+  return prisma.payment.findFirst({
+    where: { barberId, kind: "SUBSCRIPTION", status: "PAID" },
+    orderBy: [{ paidAt: "desc" }, { createdAt: "desc" }],
+  });
+}
+
+export async function closePendingSubscriptions(barberId: string) {
+  await prisma.payment.updateMany({
+    where: { barberId, kind: "SUBSCRIPTION", status: "PENDING" },
+    data: { status: "CANCELLED" },
+  });
+}
+
 export async function syncPendingSubscription(barberId: string, amountCents: number) {
   const pending = await prisma.payment.findMany({
     where: { barberId, kind: "SUBSCRIPTION", status: "PENDING" },
