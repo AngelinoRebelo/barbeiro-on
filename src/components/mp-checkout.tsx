@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { initMercadoPago, Payment, StatusScreen } from "@mercadopago/sdk-react";
 import { brl } from "@/lib/utils";
 
@@ -13,11 +13,20 @@ type Props = {
   onPaid?: () => void;
 };
 
-export function MpCheckout({ paymentId, publicKey, amountCents, payerEmail, preferenceId, onPaid }: Props) {
+export const MpCheckout = memo(function MpCheckout({
+  paymentId,
+  publicKey,
+  amountCents,
+  payerEmail,
+  preferenceId,
+  onPaid,
+}: Props) {
   const [ready, setReady] = useState(false);
   const [mpPaymentId, setMpPaymentId] = useState("");
   const [paid, setPaid] = useState(false);
   const [error, setError] = useState("");
+  const onPaidRef = useRef(onPaid);
+  onPaidRef.current = onPaid;
 
   useEffect(() => {
     if (!publicKey) return;
@@ -32,22 +41,66 @@ export function MpCheckout({ paymentId, publicKey, amountCents, payerEmail, pref
       const data = await res.json().catch(() => ({}));
       if (data.status === "PAID") {
         setPaid(true);
-        onPaid?.();
+        onPaidRef.current?.();
       } else if (data.mpPaymentId) {
         setMpPaymentId((current) => current || data.mpPaymentId);
       }
     }, 4000);
     return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paymentId, paid]);
 
-  const methods = {
-    creditCard: "all" as const,
-    debitCard: "all" as const,
-    bankTransfer: ["pix"],
-    maxInstallments: 12,
-    ...(preferenceId ? { mercadoPago: "all" as const } : {}),
-  };
+  const initialization = useMemo(
+    () => ({
+      amount: Number((amountCents / 100).toFixed(2)),
+      preferenceId: preferenceId || undefined,
+      payer: payerEmail ? { email: payerEmail } : undefined,
+    }),
+    [amountCents, preferenceId, payerEmail],
+  );
+
+  const customization = useMemo(
+    () => ({
+      paymentMethods: {
+        creditCard: "all" as const,
+        debitCard: "all" as const,
+        bankTransfer: ["pix"],
+        maxInstallments: 12,
+        ...(preferenceId ? { mercadoPago: "all" as const } : {}),
+      },
+      visual: { style: { theme: "default" as const } },
+    }),
+    [preferenceId],
+  );
+
+  const statusInitialization = useMemo(
+    () => ({ paymentId: mpPaymentId }),
+    [mpPaymentId],
+  );
+
+  const onSubmit = useCallback(async ({ formData }: { formData: unknown }) => {
+    setError("");
+    const res = await fetch(`/api/payments/${paymentId}/process`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ formData }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error || "Não foi possível processar o pagamento.");
+      throw new Error(data.error || "Falha no pagamento");
+    }
+    if (data.status === "approved") {
+      setPaid(true);
+      onPaidRef.current?.();
+    } else if (data.id) {
+      setMpPaymentId(String(data.id));
+    }
+    return data;
+  }, [paymentId]);
+
+  const onError = useCallback(() => {
+    setError("O Mercado Pago não conseguiu abrir o checkout.");
+  }, []);
 
   if (!publicKey) {
     return <p className="text-sm text-[#ff5d73]">Mercado Pago sem Public Key. Cadastre em PIX e Mercado Pago.</p>;
@@ -60,7 +113,7 @@ export function MpCheckout({ paymentId, publicKey, amountCents, payerEmail, pref
       <div className="overflow-hidden rounded-2xl bg-white p-2">
         <StatusScreen
           id={`status_${paymentId}`}
-          initialization={{ paymentId: mpPaymentId }}
+          initialization={statusInitialization}
           locale="pt-BR"
         />
       </div>
@@ -77,38 +130,12 @@ export function MpCheckout({ paymentId, publicKey, amountCents, payerEmail, pref
         <Payment
           id={`payment_${paymentId}`}
           locale="pt-BR"
-          initialization={{
-            amount: Number((amountCents / 100).toFixed(2)),
-            preferenceId: preferenceId || undefined,
-            payer: payerEmail ? { email: payerEmail } : undefined,
-          }}
-          customization={{
-            paymentMethods: methods,
-            visual: { style: { theme: "default" } },
-          }}
-          onSubmit={async ({ formData }) => {
-            setError("");
-            const res = await fetch(`/api/payments/${paymentId}/process`, {
-              method: "POST",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({ formData }),
-            });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) {
-              setError(data.error || "Não foi possível processar o pagamento.");
-              throw new Error(data.error || "Falha no pagamento");
-            }
-            if (data.status === "approved") {
-              setPaid(true);
-              onPaid?.();
-            } else if (data.id) {
-              setMpPaymentId(String(data.id));
-            }
-            return data;
-          }}
-          onError={() => setError("O Mercado Pago não conseguiu abrir o checkout.")}
+          initialization={initialization}
+          customization={customization}
+          onSubmit={onSubmit}
+          onError={onError}
         />
       </div>
     </div>
   );
-}
+});

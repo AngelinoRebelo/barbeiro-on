@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Card, Badge, Button } from "@/components/ui";
 import { brl, formatWhen, STATUS_LABEL } from "@/lib/utils";
@@ -56,22 +56,30 @@ export function PortalAgenda({ slug }: { slug: string }) {
     preferenceId: string;
   } | null>(null);
   const [msg, setMsg] = useState("");
+  const checkoutRef = useRef(checkout);
+  checkoutRef.current = checkout;
 
   async function load() {
     const res = await fetch("/api/portal/appointments");
     const data = await res.json();
-    setItems((data.appointments || []).filter((a: Row) => a.barber.slug === slug));
+    const next = (data.appointments || []).filter((a: Row) => a.barber.slug === slug);
+    setItems(next);
+    const open = checkoutRef.current;
+    if (open && next.some((a: Row) => a.id === open.appointmentId && a.paid === "PAID")) {
+      setCheckout(null);
+    }
   }
 
   useEffect(() => {
-    load();
+    void load();
     const live = new EventSource(`/api/shop/${slug}/live`);
     const refresh = () => {
+      if (checkoutRef.current) return;
       void load();
     };
     live.addEventListener("slots", refresh);
     live.addEventListener("queue", refresh);
-    const timer = setInterval(load, 8000);
+    const timer = setInterval(refresh, 8000);
     return () => {
       live.close();
       clearInterval(timer);
@@ -165,6 +173,7 @@ export function PortalAgenda({ slug }: { slug: string }) {
         </div>
         {checkout?.appointmentId === a.id && (
           <MpCheckout
+            key={checkout.paymentId}
             paymentId={checkout.paymentId}
             publicKey={checkout.publicKey}
             amountCents={checkout.amountCents}

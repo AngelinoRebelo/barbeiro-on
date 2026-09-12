@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Card, Field, inputClass, Badge } from "@/components/ui";
 import { brl, hm, ymd, STATUS_LABEL } from "@/lib/utils";
 import { MpCheckout } from "@/components/mp-checkout-lazy";
@@ -42,6 +42,8 @@ export default function AgendaPage() {
     payerEmail: string;
     preferenceId: string;
   } | null>(null);
+  const checkoutRef = useRef(checkout);
+  checkoutRef.current = checkout;
 
   const times = useMemo(() => {
     const out: string[] = [];
@@ -65,8 +67,11 @@ export default function AgendaPage() {
   }
 
   useEffect(() => {
-    load();
-    const timer = setInterval(load, 8000);
+    void load();
+    const timer = setInterval(() => {
+      if (checkoutRef.current) return;
+      void load();
+    }, 8000);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date]);
@@ -249,6 +254,7 @@ export default function AgendaPage() {
               {checkout?.appointmentId === a.id && (
                 <div className="mt-4 border-t border-white/5 pt-4">
                   <MpCheckout
+                    key={checkout.paymentId}
                     paymentId={checkout.paymentId}
                     publicKey={checkout.publicKey}
                     amountCents={checkout.amountCents}

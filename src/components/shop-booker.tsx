@@ -38,7 +38,9 @@ export function ShopBooker({ slug, initialQr, loggedIn = false }: { slug: string
   } | null>(null);
   const queryRef = useRef({ serviceId: "", date: ymd(new Date()) });
   const reqRef = useRef(0);
+  const checkoutRef = useRef(checkout);
   queryRef.current = { serviceId, date };
+  checkoutRef.current = checkout;
 
   const canPay = Boolean(shop?.pix || shop?.mercadopago);
 
@@ -61,6 +63,7 @@ export function ShopBooker({ slug, initialQr, loggedIn = false }: { slug: string
   }, []);
 
   useEffect(() => {
+    if (checkoutRef.current) return;
     if (serviceId) load(serviceId, date);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serviceId, date]);
@@ -68,6 +71,7 @@ export function ShopBooker({ slug, initialQr, loggedIn = false }: { slug: string
   useEffect(() => {
     const live = new EventSource(`/api/shop/${slug}/live`);
     const refresh = () => {
+      if (checkoutRef.current) return;
       void load();
     };
     live.addEventListener("slots", refresh);
@@ -179,6 +183,7 @@ export function ShopBooker({ slug, initialQr, loggedIn = false }: { slug: string
         {checkout && (
           <div className="mt-6 border-t border-white/5 pt-4">
             <MpCheckout
+              key={checkout.paymentId}
               paymentId={checkout.paymentId}
               publicKey={checkout.publicKey}
               amountCents={checkout.amountCents}
