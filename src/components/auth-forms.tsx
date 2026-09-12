@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button, Field, inputClass } from "./ui";
 import { brl } from "@/lib/utils";
+import { shopPath } from "@/lib/paths";
 import { FEATURE_LABELS, type FeatureFlags } from "@/lib/features";
 
 type Plan = {
@@ -20,7 +21,7 @@ type Plan = {
 export function LoginForm({ shopSlug }: { shopSlug?: string }) {
   const params = useSearchParams();
   const [error, setError] = useState(params.get("erro") || "");
-  const [info, setInfo] = useState("");
+  const [info, setInfo] = useState(params.get("ok") || "");
   const next = params.get("next") || "";
 
   async function resend(email: string) {
@@ -82,6 +83,7 @@ export function LoginForm({ shopSlug }: { shopSlug?: string }) {
 }
 
 export function BarberRegisterForm() {
+  const router = useRouter();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [trialDays, setTrialDays] = useState(15);
   const [form, setForm] = useState({
@@ -97,8 +99,6 @@ export function BarberRegisterForm() {
     mpAccessToken: "",
   });
   const [error, setError] = useState("");
-  const [ok, setOk] = useState("");
-  const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
 
   function applyCatalog(d: { plans?: Plan[]; trialDays?: number }) {
@@ -137,17 +137,19 @@ export function BarberRegisterForm() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    setOk("");
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ ...form, role: "BARBER" }),
     });
     const data = await res.json();
-    setLoading(false);
-    if (!res.ok && res.status !== 201) return setError(data.error || "Falha no cadastro.");
-    setOk(data.message || "Unidade criada. Confirme o e-mail.");
-    setUrl(data.url || data.path || "");
+    if (!res.ok && res.status !== 201) {
+      setLoading(false);
+      return setError(data.error || "Falha no cadastro.");
+    }
+    const slug = typeof data.slug === "string" ? data.slug : "";
+    const loginPath = slug ? shopPath(slug, "/login") : "/login";
+    router.replace(`${loginPath}?ok=${encodeURIComponent("Unidade criada. Confirme o e-mail e entre.")}`);
   }
 
   const selected = plans.find((p) => p.id === form.planId);
@@ -222,7 +224,6 @@ export function BarberRegisterForm() {
         <input className={inputClass()} value={form.mpAccessToken} onChange={(e) => setForm({ ...form, mpAccessToken: e.target.value })} placeholder="APP_USR-..." />
       </Field>
       {error && <p className="text-sm text-[#ff5d73]">{error}</p>}
-      {ok && <p className="text-sm text-cyan">{ok}{url ? ` ${url}` : ""}</p>}
       <Button className="w-full" disabled={loading || !form.planId}>
         {loading ? "Criando unidade..." : "Criar barbearia"}
       </Button>
@@ -231,25 +232,28 @@ export function BarberRegisterForm() {
 }
 
 export function ClientRegisterForm({ shopSlug, shopName }: { shopSlug: string; shopName: string }) {
+  const router = useRouter();
   const [form, setForm] = useState({ name: "", email: "", password: "", phone: "" });
   const [error, setError] = useState("");
-  const [ok, setOk] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
-    setOk("");
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ ...form, role: "CLIENT", shopSlug }),
     });
     const data = await res.json();
-    setLoading(false);
-    if (!res.ok && res.status !== 201) return setError(data.error || "Falha no cadastro.");
-    setOk(data.message || `Conta criada em ${shopName}. Confirme o e-mail.`);
+    if (!res.ok && res.status !== 201) {
+      setLoading(false);
+      return setError(data.error || "Falha no cadastro.");
+    }
+    router.replace(
+      `${shopPath(shopSlug, "/login")}?ok=${encodeURIComponent(`Conta criada em ${shopName}. Confirme o e-mail e entre.`)}`,
+    );
   }
 
   return (
@@ -267,7 +271,6 @@ export function ClientRegisterForm({ shopSlug, shopName }: { shopSlug: string; s
         <input className={inputClass()} type="password" name="password" autoComplete="new-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
       </Field>
       {error && <p className="text-sm text-[#ff5d73]">{error}</p>}
-      {ok && <p className="text-sm text-cyan">{ok}</p>}
       <Button className="w-full" disabled={loading}>
         {loading ? "Criando..." : "Criar conta nesta barbearia"}
       </Button>
