@@ -166,12 +166,23 @@ export async function DELETE(_: Request, ctx: Ctx) {
 
   if (user.barberProfile) {
     const barberId = user.barberProfile.id;
+    const members = await prisma.user.findMany({
+      where: { role: "CLIENT", shopId: barberId },
+      select: { id: true },
+    });
+    const linked = await prisma.barberClient.findMany({
+      where: { barberId, userId: { not: null } },
+      select: { userId: true },
+    });
+    const clientIds = [...new Set([...members.map((m) => m.id), ...linked.map((c) => c.userId).filter((id): id is string => Boolean(id))])];
     await prisma.$transaction(async (tx) => {
       await tx.appointment.deleteMany({ where: { barberId } });
       await tx.payment.deleteMany({ where: { barberId } });
       await tx.barberClient.deleteMany({ where: { barberId } });
       await tx.service.deleteMany({ where: { barberId } });
-      await tx.user.updateMany({ where: { shopId: barberId }, data: { shopId: null } });
+      if (clientIds.length) {
+        await tx.user.deleteMany({ where: { id: { in: clientIds }, role: "CLIENT" } });
+      }
       await tx.user.delete({ where: { id } });
     });
   } else {

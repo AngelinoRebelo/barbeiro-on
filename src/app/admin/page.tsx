@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
-import { Card, Badge } from "@/components/ui";
-import { brl, statusLabel } from "@/lib/utils";
+import { Card } from "@/components/ui";
+import { brl } from "@/lib/utils";
 import Link from "next/link";
+import { AdminRecentAccounts } from "@/components/admin-recent-accounts";
 
 export default async function AdminHome() {
-  await requireAdmin();
+  const { user: me } = await requireAdmin();
   const [users, barbers, pending, appointments, paid] = await Promise.all([
     prisma.user.count(),
     prisma.user.count({ where: { role: "BARBER" } }),
@@ -16,7 +17,7 @@ export default async function AdminHome() {
   const recent = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
     take: 6,
-    include: { barberProfile: true },
+    include: { barberProfile: true, shop: true },
   });
 
   const stats = [
@@ -41,19 +42,17 @@ export default async function AdminHome() {
           <h2>Últimas contas</h2>
           <Link className="text-sm text-gold" href="/admin/usuarios">Gerenciar</Link>
         </div>
-        <div className="grid gap-2">
-          {recent.map((u) => (
-            <Link key={u.id} href={`/admin/usuarios/${u.id}`} className="flex items-center justify-between rounded-2xl border border-white/5 px-4 py-3 hover:border-gold/30">
-              <div>
-                <p className="font-medium">{u.name}</p>
-                <p className="text-sm text-[#8b93a7]">{u.email}{u.barberProfile ? ` · ${u.barberProfile.shopName}` : ""}</p>
-              </div>
-              <Badge tone={u.status === "ACTIVE" ? "cyan" : u.status === "SUSPENDED" ? "danger" : "muted"}>
-                {statusLabel(u.role)} · {statusLabel(u.status)}
-              </Badge>
-            </Link>
-          ))}
-        </div>
+        <AdminRecentAccounts
+          me={me.id}
+          users={recent.map((u) => ({
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            role: u.role,
+            status: u.status,
+            shopName: u.barberProfile?.shopName || u.shop?.shopName || null,
+          }))}
+        />
       </Card>
     </div>
   );

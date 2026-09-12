@@ -100,8 +100,12 @@ export default function UsuariosPage() {
     return true;
   }
 
-  async function remove(id: string) {
-    if (!confirm("Excluir este usuário? Esta ação não pode ser desfeita.")) return;
+  async function remove(id: string, role: string) {
+    const warn =
+      role === "BARBER"
+        ? "Excluir esta unidade também apaga as contas de clientes vinculadas. Esta ação não pode ser desfeita."
+        : "Excluir este usuário? Esta ação não pode ser desfeita.";
+    if (!confirm(warn)) return;
     setBusy(id);
     const res = await fetch(`/api/admin/users/${id}`, { method: "DELETE" });
     const data = await res.json().catch(() => ({}));
@@ -236,7 +240,7 @@ export default function UsuariosPage() {
                       Reenviar e-mail
                     </Button>
                     {u.id !== me && u.role !== "ADMIN" && (
-                      <Button variant="danger" disabled={busy === u.id} onClick={() => remove(u.id)}>
+                      <Button variant="danger" disabled={busy === u.id} onClick={() => remove(u.id, u.role)}>
                         Excluir
                       </Button>
                     )}
@@ -395,7 +399,7 @@ export default function UsuariosPage() {
                                     <Button variant="ghost" disabled={busy === c.id} onClick={() => patch(c.id, { action: "resend" })}>
                                       Reenviar e-mail
                                     </Button>
-                                    <Button variant="danger" disabled={busy === c.id} onClick={() => remove(c.id)}>
+                                    <Button variant="danger" disabled={busy === c.id} onClick={() => remove(c.id, "CLIENT")}>
                                       Excluir
                                     </Button>
                                   </div>
