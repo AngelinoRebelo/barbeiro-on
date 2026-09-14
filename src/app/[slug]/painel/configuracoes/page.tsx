@@ -14,6 +14,7 @@ function notice(ok: boolean, text: string): Notice {
 export default function ConfigPage() {
   const router = useRouter();
   const [form, setForm] = useState({
+    name: "",
     shopName: "",
     bio: "",
     address: "",
@@ -135,9 +136,11 @@ export default function ConfigPage() {
             const data = await res.json().catch(() => ({}));
             setShopBusy(false);
             setShopMsg(notice(res.ok, res.ok ? "Unidade salva." : data.error || "Não foi possível salvar a unidade."));
+            if (res.ok) router.refresh();
           }}
         >
           <Field label="Nome da barbearia"><input className={inputClass()} value={form.shopName} onChange={(e) => setForm({ ...form, shopName: e.target.value })} /></Field>
+          <Field label="Nome do barbeiro"><input className={inputClass()} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
           <Field label="Cidade"><input className={inputClass()} value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></Field>
           <Field label="Endereço"><input className={inputClass()} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></Field>
           <Field label="Bio"><textarea className={inputClass()} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} /></Field>

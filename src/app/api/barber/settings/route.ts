@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { apiUser, jsonError } from "@/lib/auth";
+import { apiUser, issueSession, jsonError } from "@/lib/auth";
 import { paymentSettingsSchema } from "@/lib/validators";
 import { encryptSecret, decryptSecret, maskSecret } from "@/lib/crypto";
 
@@ -16,6 +16,7 @@ export async function GET() {
   }
   return NextResponse.json({
     profile: {
+      name: ctx.user.name,
       shopName: p.shopName,
       slug: p.slug,
       bio: p.bio,
@@ -39,6 +40,10 @@ export async function PATCH(req: Request) {
   if (!ctx?.user.barberProfile) return jsonError("Acesso negado.", 403);
   const body = await req.json().catch(() => ({}));
   const p = ctx.user.barberProfile;
+
+  const hasName = typeof body.name === "string";
+  const name = hasName ? body.name.trim().slice(0, 80) : "";
+  if (hasName && name.length < 2) return jsonError("Informe o nome do barbeiro.");
 
   const shopPatch: Record<string, unknown> = {};
   if (typeof body.shopName === "string" && body.shopName.trim().length >= 2) {
@@ -64,9 +69,18 @@ export async function PATCH(req: Request) {
     }
   }
 
-  const profile = await prisma.barberProfile.update({
-    where: { id: p.id },
-    data: shopPatch,
-  });
-  return NextResponse.json({ ok: true, slug: profile.slug });
+  const [profile, user] = await prisma.$transaction([
+    prisma.barberProfile.update({
+      where: { id: p.id },
+      data: shopPatch,
+    }),
+    name
+      ? prisma.user.update({
+          where: { id: ctx.user.id },
+          data: { name },
+        })
+      : prisma.user.findUniqueOrThrow({ where: { id: ctx.user.id } }),
+  ]);
+  await issueSession({ ...user, barberProfile: profile, shop: null });
+  return NextResponse.json({ ok: true, slug: profile.slug, name: user.name });
 }
