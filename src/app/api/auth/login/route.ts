@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validators";
 import { verifyPassword } from "@/lib/password";
 import { issueSession, redirectHome } from "@/lib/auth";
-import { publicOrigin } from "@/lib/utils";
+import { localRedirect } from "@/lib/http";
 
 function safeNext(raw: string, shopSlug: string) {
   if (!raw.startsWith("/") || raw.startsWith("//")) return "";
@@ -33,19 +33,18 @@ async function credentialsFrom(req: Request) {
   };
 }
 
-function fail(form: boolean, req: Request, message: string, shopSlug: string, status = 401) {
+function fail(form: boolean, message: string, shopSlug: string, status = 401) {
   if (!form) return NextResponse.json({ error: message }, { status });
   const path = shopSlug ? `/${shopSlug}/login` : "/login";
-  const url = new URL(path, publicOrigin(req));
-  url.searchParams.set("erro", message);
-  return NextResponse.redirect(url, 303);
+  const params = new URLSearchParams({ erro: message });
+  return localRedirect(`${path}?${params}`, 303);
 }
 
 export async function POST(req: Request) {
   const input = await credentialsFrom(req);
   const parsed = loginSchema.safeParse({ email: input.email, password: input.password });
   if (!parsed.success) {
-    return fail(input.form, req, parsed.error.issues[0]?.message || "Dados inválidos.", input.shopSlug, 400);
+    return fail(input.form, parsed.error.issues[0]?.message || "Dados inválidos.", input.shopSlug, 400);
   }
 
   const email = parsed.data.email.toLowerCase().trim();
@@ -56,25 +55,25 @@ export async function POST(req: Request) {
     include: { barberProfile: true, shop: true },
   });
   if (!user || !(await verifyPassword(parsed.data.password, user.passwordHash))) {
-    return fail(input.form, req, "E-mail ou senha inválidos.", shopSlug);
+    return fail(input.form, "E-mail ou senha inválidos.", shopSlug);
   }
   if (user.status === "SUSPENDED") {
-    return fail(input.form, req, "Conta suspensa pelo administrador.", shopSlug, 403);
+    return fail(input.form, "Conta suspensa pelo administrador.", shopSlug, 403);
   }
   if (user.status === "PENDING_EMAIL" || !user.emailVerified) {
-    return fail(input.form, req, "Confirme seu e-mail antes de entrar.", shopSlug, 403);
+    return fail(input.form, "Confirme seu e-mail antes de entrar.", shopSlug, 403);
   }
 
   if (shopSlug) {
     if (user.role === "CLIENT" && user.shop?.slug !== shopSlug) {
-      return fail(input.form, req, "Esta conta não pertence a esta barbearia.", shopSlug, 403);
+      return fail(input.form, "Esta conta não pertence a esta barbearia.", shopSlug, 403);
     }
     if (user.role === "ADMIN") {
-      return fail(input.form, req, "Admin entra pela plataforma, não pela loja.", shopSlug, 403);
+      return fail(input.form, "Admin entra pela plataforma, não pela loja.", shopSlug, 403);
     }
   } else if (user.role === "CLIENT") {
     if (!user.shop?.slug) {
-      return fail(input.form, req, "Entre pelo link da sua barbearia.", shopSlug, 403);
+      return fail(input.form, "Entre pelo link da sua barbearia.", shopSlug, 403);
     }
   }
 
@@ -82,7 +81,7 @@ export async function POST(req: Request) {
   const next = safeNext(input.next, user.barberProfile?.slug || user.shop?.slug || shopSlug);
   const dest = next || redirectHome(user);
   if (input.form) {
-    return NextResponse.redirect(new URL(dest, publicOrigin(req)), 303);
+    return localRedirect(dest || "/login", 303);
   }
   return NextResponse.json({ ok: true, redirect: dest });
 }

@@ -48,21 +48,25 @@ export async function readSessionToken(token: string): Promise<SessionUser | nul
   }
 }
 
+export function sessionCookieOptions(maxAge: number) {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge,
+  };
+}
+
 export async function setSessionCookie(user: SessionUser) {
   const token = await signSession(user);
   const store = await cookies();
-  store.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7,
-  });
+  store.set(SESSION_COOKIE, token, sessionCookieOptions(60 * 60 * 24 * 7));
 }
 
 export async function clearSessionCookie() {
   const store = await cookies();
-  store.delete(SESSION_COOKIE);
+  store.set(SESSION_COOKIE, "", sessionCookieOptions(0));
 }
 
 export async function getSession(): Promise<SessionUser | null> {

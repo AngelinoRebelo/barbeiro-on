@@ -7,6 +7,8 @@ import { LoginForm } from "@/components/auth-forms";
 import { shopPath, isReservedSlug } from "@/lib/paths";
 import { ShopBackdrop, ShopLogo } from "@/components/shop-brand";
 
+export const dynamic = "force-dynamic";
+
 export default async function ShopLoginPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   if (isReservedSlug(slug)) notFound();

@@ -1,4 +1,4 @@
-import { getSession } from "@/lib/session";
+import { clearSessionCookie, getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
@@ -25,7 +25,10 @@ export default async function PainelLayout({
     where: { id: session.sub },
     include: { barberProfile: true },
   });
-  if (!user || user.role !== "BARBER" || !user.barberProfile) redirect("/login");
+  if (!user || user.role !== "BARBER" || !user.barberProfile) {
+    await clearSessionCookie();
+    redirect(`/${slug}/login`);
+  }
   if (user.barberProfile.slug !== slug) redirect(shopPath(user.barberProfile.slug, "/painel"));
   const features = parseFeatures(user.barberProfile.features);
   const base = shopPath(slug, "/painel");

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Card, Logo } from "@/components/ui";
 import { BarberRegisterForm } from "@/components/auth-forms";
 
+export const dynamic = "force-dynamic";
+
 export default function CadastroPage() {
   return (
     <div className="grid-bg grid min-h-screen place-items-center px-4 py-10">

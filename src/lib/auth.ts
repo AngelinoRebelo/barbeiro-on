@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import { getSession, setSessionCookie, type SessionUser } from "./session";
+import { clearSessionCookie, getSession, setSessionCookie, type SessionUser } from "./session";
 import { parseFeatures, type FeatureFlags } from "./features";
 import { homePath, shopPath } from "./paths";
 import { hasAccess } from "./access";
@@ -48,8 +48,14 @@ export async function requireUser() {
     where: { id: session.sub },
     include: userInclude,
   });
-  if (!user) redirect("/login");
-  if (user.status === "SUSPENDED") redirect("/login?erro=suspenso");
+  if (!user) {
+    await clearSessionCookie();
+    redirect("/login");
+  }
+  if (user.status === "SUSPENDED") {
+    await clearSessionCookie();
+    redirect("/login?erro=suspenso");
+  }
   return { session, user };
 }
 

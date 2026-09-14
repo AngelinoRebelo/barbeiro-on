@@ -1,22 +1,29 @@
-import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
+import { clearSessionCookie, getSession } from "@/lib/session";
 import { issueSession, redirectHome } from "@/lib/auth";
-import { publicOrigin } from "@/lib/utils";
+import { localRedirect } from "@/lib/http";
 
-export async function GET(req: Request) {
-  const origin = publicOrigin(req);
+export async function GET() {
   const session = await getSession();
-  if (!session) return NextResponse.redirect(new URL("/login", origin));
+  if (!session) {
+    await clearSessionCookie();
+    return localRedirect("/login");
+  }
 
   const user = await prisma.user.findUnique({
     where: { id: session.sub },
     include: { barberProfile: true, shop: true },
   });
   if (!user || user.status === "SUSPENDED") {
-    return NextResponse.redirect(new URL("/login", origin));
+    await clearSessionCookie();
+    return localRedirect("/login");
   }
 
   await issueSession(user);
-  return NextResponse.redirect(new URL(redirectHome(user) || "/login", origin));
+  const dest = redirectHome(user);
+  if (!dest || dest === "/login") {
+    await clearSessionCookie();
+    return localRedirect("/login");
+  }
+  return localRedirect(dest);
 }

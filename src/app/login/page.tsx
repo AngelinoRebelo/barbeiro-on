@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Card, Logo } from "@/components/ui";
 import { LoginForm } from "@/components/auth-forms";
 
+export const dynamic = "force-dynamic";
+
 export default function LoginPage() {
   return (
     <div className="grid-bg grid min-h-screen place-items-center px-4">

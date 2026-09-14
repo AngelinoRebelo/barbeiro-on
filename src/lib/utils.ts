@@ -44,20 +44,22 @@ function isLocalHost(value: string) {
 
 export function publicOrigin(req: { url: string; headers: Headers }) {
   const forwardedHost = (req.headers.get("x-forwarded-host") || "").split(",")[0].trim();
-  const forwardedProto = (req.headers.get("x-forwarded-proto") || "").split(",")[0].trim();
-  if (forwardedHost && !isLocalHost(forwardedHost)) {
-    return `${forwardedProto || "https"}://${forwardedHost}`;
+  const hostHeader = (req.headers.get("host") || "").split(",")[0].trim();
+  const host = forwardedHost || hostHeader;
+  if (host && !isLocalHost(host)) {
+    return `https://${host}`;
   }
   const origin = (req.headers.get("origin") || "").replace(/\/$/, "");
-  if (origin && !isLocalHost(origin)) return origin;
-  const host = (req.headers.get("host") || "").split(",")[0].trim();
-  if (host && !isLocalHost(host)) {
-    const proto = forwardedProto || (host.includes("localhost") ? "http" : "https");
-    return `${proto}://${host}`;
+  if (origin && !isLocalHost(origin)) {
+    try {
+      return `https://${new URL(origin).host}`;
+    } catch {
+      return origin.replace(/^http:\/\//i, "https://");
+    }
   }
   try {
     const url = new URL(req.url);
-    if (!isLocalHost(url.hostname)) return url.origin;
+    if (!isLocalHost(url.hostname)) return `https://${url.host}`;
   } catch {
     /* ignore */
   }
