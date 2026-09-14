@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { SESSION_COOKIE, readSessionToken, sessionCookieOptions, type SessionUser } from "@/lib/session";
-import { localRedirect } from "@/lib/http";
+import { middlewareRedirect } from "@/lib/http";
 import { homePath, isReservedSlug } from "@/lib/paths";
 
 function dropSession(res: NextResponse) {
@@ -12,7 +12,7 @@ function dropSession(res: NextResponse) {
 function sendTo(req: NextRequest, dest: string | null, fallback: string) {
   const target = dest || fallback;
   if (target === req.nextUrl.pathname) return null;
-  return localRedirect(target);
+  return middlewareRedirect(req, target);
 }
 
 function homeOf(session: SessionUser) {
@@ -29,17 +29,17 @@ export async function middleware(req: NextRequest) {
   const session = token ? await readSessionToken(token) : null;
 
   if (pathname.startsWith("/admin")) {
-    if (!session) return localRedirect("/login");
+    if (!session) return middlewareRedirect(req, "/login");
     if (session.role !== "ADMIN") {
-      return sendTo(req, homeOf(session), "/login") ?? dropSession(localRedirect("/login"));
+      return sendTo(req, homeOf(session), "/login") ?? dropSession(middlewareRedirect(req, "/login"));
     }
   }
 
   if (pathname === "/painel" || pathname.startsWith("/painel/") || pathname === "/portal" || pathname.startsWith("/portal/")) {
-    if (!session) return localRedirect("/login");
+    if (!session) return middlewareRedirect(req, "/login");
     const home = homeOf(session);
-    if (home) return localRedirect(home);
-    return dropSession(localRedirect("/login"));
+    if (home) return middlewareRedirect(req, home);
+    return dropSession(middlewareRedirect(req, "/login"));
   }
 
   const parts = pathname.split("/").filter(Boolean);
@@ -47,25 +47,25 @@ export async function middleware(req: NextRequest) {
   const nested = parts[1];
 
   if (maybeSlug && !isReservedSlug(maybeSlug) && nested === "painel") {
-    if (!session) return localRedirect(`/${maybeSlug}/login`);
-    if (session.role === "ADMIN") return localRedirect("/admin");
+    if (!session) return middlewareRedirect(req, `/${maybeSlug}/login`);
+    if (session.role === "ADMIN") return middlewareRedirect(req, "/admin");
     if (session.role !== "BARBER") {
-      return sendTo(req, homeOf(session), `/${maybeSlug}/login`) ?? localRedirect(`/${maybeSlug}/login`);
+      return sendTo(req, homeOf(session), `/${maybeSlug}/login`) ?? middlewareRedirect(req, `/${maybeSlug}/login`);
     }
   }
 
   if (maybeSlug && !isReservedSlug(maybeSlug) && nested === "portal") {
-    if (!session) return localRedirect(`/${maybeSlug}/login`);
-    if (session.role === "ADMIN") return localRedirect("/admin");
+    if (!session) return middlewareRedirect(req, `/${maybeSlug}/login`);
+    if (session.role === "ADMIN") return middlewareRedirect(req, "/admin");
     if (session.role !== "CLIENT") {
-      return sendTo(req, homeOf(session), `/${maybeSlug}/login`) ?? localRedirect(`/${maybeSlug}/login`);
+      return sendTo(req, homeOf(session), `/${maybeSlug}/login`) ?? middlewareRedirect(req, `/${maybeSlug}/login`);
     }
   }
 
   if (pathname === "/login" || pathname === "/cadastro") {
     if (session) {
       const home = homeOf(session);
-      if (home) return localRedirect(home);
+      if (home) return middlewareRedirect(req, home);
       return dropSession(NextResponse.next());
     }
   }
