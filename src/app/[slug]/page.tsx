@@ -27,40 +27,49 @@ export default async function ShopPage({ params }: { params: Promise<{ slug: str
   return (
     <ShopBackdrop slug={slug} brandAt={shop.brandAt}>
       {!shop.brandAt && <ShopAtmosphere />}
-      <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
+      <header className="relative z-10 mx-auto flex max-w-6xl flex-col gap-4 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-6">
         <ShopLogo slug={slug} shopName={shop.shopName} brandAt={shop.brandAt} href={shopPath(slug)} />
-        <div className="flex flex-wrap items-center gap-3">
+        <nav className="grid w-full min-w-0 grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end sm:gap-3">
           {clientHere ? (
             <>
-              <span className="text-sm text-[#8b93a7]">Olá, {session.name}</span>
-              <Link href={shopPath(slug, "/portal")}>
-                <Button variant="ghost">Minha área</Button>
+              <p className="col-span-2 truncate text-sm text-[#8b93a7] sm:col-span-1 sm:max-w-[10rem]">Olá, {session.name}</p>
+              <Link href={shopPath(slug, "/portal")} className="min-w-0">
+                <Button variant="ghost" className="w-full px-3 sm:w-auto sm:px-5">
+                  Minha área
+                </Button>
               </Link>
-              <Link href={shopPath(slug, "/portal/agenda")}>
-                <Button>Meus horários</Button>
+              <Link href={shopPath(slug, "/portal/agenda")} className="min-w-0">
+                <Button className="w-full px-3 sm:w-auto sm:px-5">Meus horários</Button>
               </Link>
-              <LogoutButton href={shopPath(slug)} />
+              <div className="col-span-2 sm:col-span-1">
+                <LogoutButton className="w-full sm:w-auto" href={shopPath(slug)} />
+              </div>
             </>
           ) : barberHere ? (
             <>
-              <Link href={shopPath(slug, "/painel")}>
-                <Button>Painel</Button>
+              <Link href={shopPath(slug, "/painel")} className="min-w-0">
+                <Button className="w-full px-3 sm:w-auto sm:px-5">Painel</Button>
               </Link>
-              <LogoutButton href={shopPath(slug, "/login")} />
+              <LogoutButton className="w-full sm:w-auto" href={shopPath(slug, "/login")} />
             </>
           ) : (
             <>
-              <Link href={`${shopPath(slug, "/login")}?next=${encodeURIComponent(shopPath(slug))}`}>
-                <Button variant="ghost">Entrar</Button>
+              <Link href={`${shopPath(slug, "/login")}?next=${encodeURIComponent(shopPath(slug))}`} className="min-w-0">
+                <Button variant="ghost" className="w-full whitespace-nowrap px-3 sm:w-auto sm:px-5">
+                  Entrar
+                </Button>
               </Link>
-              <Link href={shopPath(slug, "/cadastro")}>
-                <Button>Criar conta nesta barbearia</Button>
+              <Link href={shopPath(slug, "/cadastro")} className="min-w-0">
+                <Button className="w-full whitespace-nowrap px-3 text-center sm:w-auto sm:px-5">
+                  <span className="sm:hidden">Criar conta</span>
+                  <span className="hidden sm:inline">Criar conta nesta barbearia</span>
+                </Button>
               </Link>
             </>
           )}
-        </div>
+        </nav>
       </header>
-      <main className="relative z-10 mx-auto max-w-6xl px-6 pb-20">
+      <main className="relative z-10 mx-auto max-w-6xl px-4 pb-20 sm:px-6">
         {!shop.approved && (
           <p className="mb-6 rounded-2xl border border-gold/30 px-4 py-3 text-sm text-gold">
             Unidade recém-criada. Cadastro de clientes já abre aqui; a agenda libera após o admin aprovar.
