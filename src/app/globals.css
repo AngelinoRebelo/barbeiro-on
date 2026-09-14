@@ -485,6 +485,50 @@ html.atm-aim {
   color: #8696a0;
 }
 
+.support-chat__tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #111b21;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.support-chat__tabs button {
+  border: none;
+  background: transparent;
+  color: #8696a0;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.55rem 0.4rem;
+  cursor: pointer;
+}
+
+.support-chat__tabs button.is-on {
+  color: #25d366;
+  box-shadow: inset 0 -2px 0 #25d366;
+}
+
+.support-chat__ticket {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #202c33;
+  color: #e9edef;
+  border-radius: 10px;
+  padding: 0.55rem 0.65rem;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.support-chat__ticket span {
+  color: #8696a0;
+  font-size: 0.72rem;
+}
+
 .support-chat__end-conv {
   border: none;
   background: transparent;

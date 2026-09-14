@@ -22,6 +22,7 @@ export default async function PortalLayout({
     { href: shopPath(slug, "/portal"), label: "Início" },
     { href: shopPath(slug, "/portal/agenda"), label: "Meus horários" },
     { href: shopPath(slug), label: "Agendar" },
+    { href: shopPath(slug, "/portal/suporte"), label: "Suporte" },
   ];
   return (
     <AppShell

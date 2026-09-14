@@ -92,7 +92,8 @@ model User {
   appointments  Appointment[]  @relation("ClientAppointments")
   payments      Payment[]      @relation("ClientPayments")
   auditLogs     AuditLog[]
-  supportTickets SupportTicket[]
+  supportTickets  SupportTicket[]
+  supportMessages SupportMessage[]
 
   @@index([shopId])
 }
@@ -285,16 +286,38 @@ model AuditLog {
 }
 
 model SupportTicket {
-  id        String   @id @default(cuid())
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  name      String   @default("")
-  email     String   @default("")
-  role      String   @default("")
-  shopSlug  String   @default("")
-  body      String
-  status    String   @default("OPEN")
-  createdAt DateTime @default(now())
+  id            String   @id @default(cuid())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name          String   @default("")
+  email         String   @default("")
+  role          String   @default("")
+  shopSlug      String   @default("")
+  subject       String   @default("")
+  body          String
+  status        String   @default("OPEN")
+  guestKey      String   @default("")
+  closedAt      DateTime?
+  lastMessageAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  messages      SupportMessage[]
 
-  @@index([status, createdAt])
+  @@index([status, lastMessageAt])
+  @@index([userId])
+  @@index([email])
+}
+
+model SupportMessage {
+  id         String        @id @default(cuid())
+  ticketId   String
+  ticket     SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId   String?
+  author     User?         @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  authorRole String        @default("")
+  authorName String        @default("")
+  body       String
+  createdAt  DateTime      @default(now())
+
+  @@index([ticketId, createdAt])
 }

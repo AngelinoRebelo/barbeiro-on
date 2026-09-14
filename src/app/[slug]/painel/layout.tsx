@@ -46,6 +46,7 @@ export default async function PainelLayout({
     { href: `${base}/financeiro`, label: "Financeiro", show: features.pix || features.mercadopago },
     { href: `${base}/configuracoes`, label: "Configurações", show: true },
     { href: `${base}/plano`, label: "Plano", show: true },
+    { href: `${base}/suporte`, label: "Suporte", show: true },
   ]
     .filter((i) => i.show)
     .map((i) => ({ href: i.href, label: i.label }));

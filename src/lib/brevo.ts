@@ -105,3 +105,51 @@ export async function sendApprovedEmail(to: string, name: string, shopName: stri
     ),
   });
 }
+
+export async function sendSupportOpenedEmail(to: string, name: string, opts: { who: string; email: string; shop?: string; preview: string; href: string }) {
+  const shop = opts.shop ? ` · /${opts.shop}` : "";
+  return sendBrevoEmail({
+    to,
+    name,
+    subject: "Nova chamada de suporte · BARBEIRO ON",
+    html: shell(
+      "Nova chamada aberta",
+      `Olá ${name},<br/><br/>Uma conversa de suporte acabou de ser criada.<br/><br/><b>${opts.who}</b> · ${opts.email}${shop}<br/><br/>${opts.preview}`,
+      "Abrir conversa",
+      opts.href,
+    ),
+  });
+}
+
+export async function sendSupportClosedEmail(to: string, name: string, opts: { who: string; email: string; shop?: string; href: string }) {
+  const shop = opts.shop ? ` · /${opts.shop}` : "";
+  return sendBrevoEmail({
+    to,
+    name,
+    subject: "Chamada de suporte encerrada · BARBEIRO ON",
+    html: shell(
+      "Chamada encerrada",
+      `Olá ${name},<br/><br/>A conversa com <b>${opts.who}</b> (${opts.email}${shop}) foi encerrada no suporte da plataforma.`,
+      "Ver chamados",
+      opts.href,
+    ),
+  });
+}
+
+export async function sendSupportReplyEmail(
+  to: string,
+  name: string,
+  opts: { from: string; preview: string; href: string; title?: string; subject?: string },
+) {
+  return sendBrevoEmail({
+    to,
+    name,
+    subject: opts.subject || "Nova mensagem no suporte · BARBEIRO ON",
+    html: shell(
+      opts.title || "Nova mensagem",
+      `Olá ${name},<br/><br/><b>${opts.from}</b> escreveu na conversa de suporte:<br/><br/>${opts.preview}`,
+      "Abrir conversa",
+      opts.href,
+    ),
+  });
+}

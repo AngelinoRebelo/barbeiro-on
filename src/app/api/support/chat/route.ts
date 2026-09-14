@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { matchSupportFaq, SUPPORT_DEFAULT } from "@/lib/support-faq";
+import { matchSupportFaq, SUPPORT_DEFAULT, SUPPORT_SYSTEM_PROMPT } from "@/lib/support-faq";
 
 const g = globalThis as typeof globalThis & { __boSupportHits?: Map<string, number[]> };
 
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   if (!message) return NextResponse.json({ error: "Informe a mensagem." }, { status: 400 });
 
   const local = matchSupportFaq(message);
-  if (local.score >= 2) return NextResponse.json({ reply: local.answer, source: "faq" });
+  if (local.score >= 2) return NextResponse.json({ reply: local.answer, source: "faq", id: local.id });
 
   const key = (process.env.OPENAI_API_KEY || "").trim();
   if (!key) return NextResponse.json({ reply: local.answer || SUPPORT_DEFAULT, source: "faq" });
@@ -37,13 +37,9 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         model: process.env.OPENAI_SUPPORT_MODEL || "gpt-4o-mini",
         temperature: 0.2,
-        max_tokens: 500,
+        max_tokens: 700,
         messages: [
-          {
-            role: "system",
-            content:
-              "Você é o assistente de suporte do BARBEIRO ONLINE, sistema de barbearias em português do Brasil. Responda só sobre agenda, fila, PIX/Mercado Pago, portal do cliente, planos, cadastro e painel. Seja direto. Use markdown **negrito** com moderação. Se não souber, diga para usar Mensagem à equipe.",
-          },
+          { role: "system", content: SUPPORT_SYSTEM_PROMPT },
           ...history.map((h: { role?: string; content?: string }) => ({
             role: h?.role === "assistant" ? "assistant" : "user",
             content: String(h?.content || "").slice(0, 1200),

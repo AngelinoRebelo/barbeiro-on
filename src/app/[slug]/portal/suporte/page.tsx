@@ -4,17 +4,17 @@ import { Suspense } from "react";
 import { Card } from "@/components/ui";
 import { SupportDesk } from "@/components/support-desk";
 
-export default function AdminSupportPage() {
+export default function ClientSupportPage() {
   return (
     <div className="space-y-4">
       <Card>
-        <h2>Central de suporte</h2>
+        <h2>Falar com o suporte</h2>
         <p className="mt-2 text-sm text-[#8b93a7]">
-          Conversas com barbeiros e clientes da rede. Você recebe e-mail quando uma chamada é <strong>aberta</strong> ou <strong>encerrada</strong>. Responda aqui; a outra ponta também recebe e-mail.
+          Conversa direta com a equipe da plataforma. O admin recebe e-mail ao abrir e ao encerrar a chamada.
         </p>
       </Card>
       <Suspense fallback={<p className="text-sm text-[#8b93a7]">Carregando conversas…</p>}>
-        <SupportDesk admin />
+        <SupportDesk />
       </Suspense>
     </div>
   );
