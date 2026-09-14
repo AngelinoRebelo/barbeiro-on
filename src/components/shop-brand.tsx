@@ -21,7 +21,7 @@ export function ShopLogo({
   const src = brandUrl(slug, brandAt);
   if (!src) return <Logo href={href} compact={compact} />;
   return (
-    <Link href={href} className={cn("flex min-w-0 items-center gap-3", className)}>
+    <Link href={href} className={cn("flex min-w-0 max-w-full items-center gap-3", className)}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}
@@ -29,9 +29,9 @@ export function ShopLogo({
         className="h-10 w-10 shrink-0 rounded-xl object-cover border border-[rgba(212,175,55,0.35)] bg-[#10131c]"
       />
       {!compact && (
-        <span className="min-w-0 leading-none">
+        <span className="min-w-0 flex-1 leading-tight">
           <span className="block text-[11px] tracking-[0.28em] text-gold">UNIDADE</span>
-          <span className="block truncate text-lg font-semibold">{shopName}</span>
+          <span className="block truncate text-lg font-semibold tracking-tight">{shopName}</span>
         </span>
       )}
     </Link>

@@ -27,47 +27,58 @@ export default async function ShopPage({ params }: { params: Promise<{ slug: str
   return (
     <ShopBackdrop slug={slug} brandAt={shop.brandAt}>
       {!shop.brandAt && <ShopAtmosphere />}
-      <header className="relative z-10 mx-auto flex max-w-6xl flex-col gap-4 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-6">
-        <ShopLogo slug={slug} shopName={shop.shopName} brandAt={shop.brandAt} href={shopPath(slug)} />
-        <nav className="grid w-full min-w-0 grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end sm:gap-3">
-          {clientHere ? (
-            <>
-              <p className="col-span-2 truncate text-sm text-[#8b93a7] sm:col-span-1 sm:max-w-[10rem]">Olá, {session.name}</p>
-              <Link href={shopPath(slug, "/portal")} className="min-w-0">
-                <Button variant="ghost" className="w-full px-3 sm:w-auto sm:px-5">
-                  Minha área
-                </Button>
-              </Link>
-              <Link href={shopPath(slug, "/portal/agenda")} className="min-w-0">
-                <Button className="w-full px-3 sm:w-auto sm:px-5">Meus horários</Button>
-              </Link>
-              <div className="col-span-2 sm:col-span-1">
-                <LogoutButton className="w-full sm:w-auto" href={shopPath(slug)} />
-              </div>
-            </>
-          ) : barberHere ? (
-            <>
-              <Link href={shopPath(slug, "/painel")} className="min-w-0">
-                <Button className="w-full px-3 sm:w-auto sm:px-5">Painel</Button>
-              </Link>
-              <LogoutButton className="w-full sm:w-auto" href={shopPath(slug, "/login")} />
-            </>
-          ) : (
-            <>
-              <Link href={`${shopPath(slug, "/login")}?next=${encodeURIComponent(shopPath(slug))}`} className="min-w-0">
-                <Button variant="ghost" className="w-full whitespace-nowrap px-3 sm:w-auto sm:px-5">
-                  Entrar
-                </Button>
-              </Link>
-              <Link href={shopPath(slug, "/cadastro")} className="min-w-0">
-                <Button className="w-full whitespace-nowrap px-3 text-center sm:w-auto sm:px-5">
-                  <span className="sm:hidden">Criar conta</span>
-                  <span className="hidden sm:inline">Criar conta nesta barbearia</span>
-                </Button>
-              </Link>
-            </>
-          )}
-        </nav>
+      <header className="relative z-10 mx-auto w-full max-w-6xl px-4 py-5 md:px-6 md:py-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:gap-8">
+          <ShopLogo
+            slug={slug}
+            shopName={shop.shopName}
+            brandAt={shop.brandAt}
+            href={shopPath(slug)}
+            className="w-full min-w-0 md:w-auto md:max-w-[min(100%,22rem)]"
+          />
+          <nav className="flex w-full min-w-0 flex-col gap-2 min-[400px]:flex-row min-[400px]:items-stretch md:w-auto md:flex-wrap md:items-center md:justify-end md:gap-3">
+            {clientHere ? (
+              <>
+                <p className="min-w-0 truncate text-center text-sm text-[#8b93a7] min-[400px]:hidden md:block md:max-w-[10rem] md:text-left">
+                  Olá, {session.name}
+                </p>
+                <Link href={shopPath(slug, "/portal")} className="min-w-0 min-[400px]:flex-1 md:flex-none">
+                  <Button variant="ghost" className="h-11 w-full px-4 md:h-auto md:w-auto md:px-5">
+                    Minha área
+                  </Button>
+                </Link>
+                <Link href={shopPath(slug, "/portal/agenda")} className="min-w-0 min-[400px]:flex-1 md:flex-none">
+                  <Button className="h-11 w-full px-4 md:h-auto md:w-auto md:px-5">Meus horários</Button>
+                </Link>
+                <LogoutButton className="h-11 w-full md:h-auto md:w-auto" href={shopPath(slug)} />
+              </>
+            ) : barberHere ? (
+              <>
+                <Link href={shopPath(slug, "/painel")} className="min-w-0 min-[400px]:flex-1 md:flex-none">
+                  <Button className="h-11 w-full px-4 md:h-auto md:w-auto md:px-5">Painel</Button>
+                </Link>
+                <LogoutButton className="h-11 w-full min-[400px]:flex-1 md:h-auto md:w-auto" href={shopPath(slug, "/login")} />
+              </>
+            ) : (
+              <>
+                <Link
+                  href={`${shopPath(slug, "/login")}?next=${encodeURIComponent(shopPath(slug))}`}
+                  className="min-w-0 min-[400px]:flex-1 md:flex-none"
+                >
+                  <Button variant="ghost" className="h-11 w-full whitespace-nowrap px-4 md:h-auto md:w-auto md:px-5">
+                    Entrar
+                  </Button>
+                </Link>
+                <Link href={shopPath(slug, "/cadastro")} className="min-w-0 min-[400px]:flex-1 md:flex-none">
+                  <Button className="h-11 w-full whitespace-nowrap px-4 text-center md:h-auto md:w-auto md:px-5">
+                    <span className="md:hidden">Criar conta</span>
+                    <span className="hidden md:inline">Criar conta nesta barbearia</span>
+                  </Button>
+                </Link>
+              </>
+            )}
+          </nav>
+        </div>
       </header>
       <main className="relative z-10 mx-auto max-w-6xl px-4 pb-20 sm:px-6">
         {!shop.approved && (
