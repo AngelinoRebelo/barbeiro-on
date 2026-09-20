@@ -20,7 +20,17 @@ type Shop = {
   services: { id: string; name: string; category: string; durationMin: number; priceCents: number }[];
 };
 
-export function ShopBooker({ slug, initialQr, loggedIn = false }: { slug: string; initialQr: string; loggedIn?: boolean }) {
+export function ShopBooker({
+  slug,
+  initialQr = "",
+  loggedIn = false,
+  compact = false,
+}: {
+  slug: string;
+  initialQr?: string;
+  loggedIn?: boolean;
+  compact?: boolean;
+}) {
   const router = useRouter();
   const [shop, setShop] = useState<Shop | null>(null);
   const [serviceId, setServiceId] = useState("");
@@ -122,14 +132,23 @@ export function ShopBooker({ slug, initialQr, loggedIn = false }: { slug: string
   if (!shop) return <p className="text-[#8b93a7]">{msg || "Carregando unidade..."}</p>;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1.2fr_320px]">
+    <div className={compact ? "grid gap-4" : "grid gap-4 lg:grid-cols-[1.2fr_320px]"}>
       <Card>
-        <h1 className="text-4xl">{shop.shopName}</h1>
-        {shop.city ? <p className="mt-2 text-xs uppercase tracking-[0.28em] text-gold">{shop.city}</p> : null}
-        {shop.barberName ? <p className="mt-2 text-[#8b93a7]">{shop.barberName}</p> : null}
-        {shop.address ? <p className="mt-1 text-[#8b93a7]">{shop.address}</p> : null}
-        {shop.bio ? <p className="mt-4">{shop.bio}</p> : null}
-        <div className="mt-6 grid gap-2">
+        {compact ? (
+          <>
+            <h2 className="text-3xl">Agendar horário</h2>
+            <p className="mt-2 text-[#8b93a7]">Escolha o serviço, o dia e um horário liberado pelo barbeiro.</p>
+          </>
+        ) : (
+          <>
+            <h1 className="text-4xl">{shop.shopName}</h1>
+            {shop.city ? <p className="mt-2 text-xs uppercase tracking-[0.28em] text-gold">{shop.city}</p> : null}
+            {shop.barberName ? <p className="mt-2 text-[#8b93a7]">{shop.barberName}</p> : null}
+            {shop.address ? <p className="mt-1 text-[#8b93a7]">{shop.address}</p> : null}
+            {shop.bio ? <p className="mt-4">{shop.bio}</p> : null}
+          </>
+        )}
+        <div className={`${compact ? "mt-5" : "mt-6"} grid gap-2`}>
           {shop.services.map((s) => (
             <button
               key={s.id}
@@ -198,16 +217,18 @@ export function ShopBooker({ slug, initialQr, loggedIn = false }: { slug: string
           </div>
         )}
       </Card>
-      <Card>
-        <h2>Entrada da sessão</h2>
-        <p className="mt-2 text-sm text-[#8b93a7]">QR da vitrine desta unidade.</p>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={initialQr} alt="QR da unidade" className="mt-4 w-full rounded-2xl" />
-        <div className="mt-3 flex gap-2">
-          <Badge tone="cyan">{shop.pix ? "PIX MP" : "PIX off"}</Badge>
-          <Badge>{shop.mercadopago ? "Cartão MP" : "Cartão off"}</Badge>
-        </div>
-      </Card>
+      {!compact && (
+        <Card>
+          <h2>Entrada da sessão</h2>
+          <p className="mt-2 text-sm text-[#8b93a7]">QR da vitrine desta unidade.</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={initialQr} alt="QR da unidade" className="mt-4 w-full rounded-2xl" />
+          <div className="mt-3 flex gap-2">
+            <Badge tone="cyan">{shop.pix ? "PIX MP" : "PIX off"}</Badge>
+            <Badge>{shop.mercadopago ? "Cartão MP" : "Cartão off"}</Badge>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

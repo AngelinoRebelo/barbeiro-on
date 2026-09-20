@@ -164,7 +164,7 @@ export function PortalAgenda({ slug }: { slug: string }) {
                 Excluir
               </Button>
             )}
-            <Link href={shopPath(a.barber.slug)}>
+            <Link href={shopPath(a.barber.slug, "/portal/agendar")}>
               <Button variant="ghost" type="button">
                 Agendar de novo
               </Button>
@@ -202,10 +202,19 @@ export function PortalAgenda({ slug }: { slug: string }) {
         </Card>
       )}
       <Card>
-        <h2 className="mb-4">Seus horários</h2>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2>Seus horários</h2>
+          <Link href={shopPath(slug, "/portal/agendar")}>
+            <Button type="button">Agendar horário</Button>
+          </Link>
+        </div>
         {msg && <p className="mb-3 text-sm text-[#ff5d73]">{msg}</p>}
         <div className="grid gap-3">
-          {items.length === 0 && <p className="text-[#8b93a7]">Nenhum agendamento ainda.</p>}
+          {items.length === 0 && (
+            <p className="text-[#8b93a7]">
+              Nenhum agendamento ainda. Use <Link className="text-gold" href={shopPath(slug, "/portal/agendar")}>Agendar</Link> para ver os horários livres e reservar.
+            </p>
+          )}
           {active.length > 0 && (
             <div className="grid gap-2">
               <p className="text-xs uppercase tracking-[0.2em] text-cyan">Ativos agora</p>

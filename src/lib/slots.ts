@@ -49,8 +49,6 @@ export async function slotsFor(
   closeTime: string,
   workDays: number[],
 ) {
-  const day = new Date(`${date}T12:00:00-03:00`).getDay();
-  if (!workDays.includes(day)) return [];
   const busy = await busyWindows(barberId, date);
   const offered = await offeredTimes(barberId, date);
   if (offered.length) {
@@ -63,5 +61,7 @@ export async function slotsFor(
         return !busy.some((b) => b.startsAt < endsAt && b.endsAt > startsAt);
       });
   }
+  const day = new Date(`${date}T12:00:00-03:00`).getDay();
+  if (!workDays.includes(day)) return [];
   return buildSlots(openTime, closeTime, durationMin, date, busy);
 }

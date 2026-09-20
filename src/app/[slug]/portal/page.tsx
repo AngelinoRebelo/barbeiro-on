@@ -31,7 +31,7 @@ export default async function PortalHome({ params }: { params: Promise<{ slug: s
         <h2 className="mt-2 text-3xl">{shop?.shopName}</h2>
         <p className="mt-3 text-[#8b93a7]">Olá, {user.name}. Esta é a sua área nesta barbearia.</p>
         <div className="mt-6 flex flex-wrap gap-2">
-          <Link href={shopPath(slug)}>
+          <Link href={shopPath(slug, "/portal/agendar")}>
             <Button>Agendar horário</Button>
           </Link>
           <Link href={shopPath(slug, "/portal/agenda")}>
